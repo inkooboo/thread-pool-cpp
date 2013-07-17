@@ -1,0 +1,3 @@
+build*
+thread_pool-build*
+*.pro.user
