@@ -3,7 +3,6 @@
 
 #include "noncopyable.hpp"
 
-#include <functional>
 #include <vector>
 #include <memory>
 #include <cstddef>
@@ -11,14 +10,13 @@
 class thread_pool_t : private noncopyable_t
 {
 public:
-    typedef std::function<void()> task_t;
-
     enum {AUTODETECT = 0};
 
     inline explicit thread_pool_t(size_t threads_count = AUTODETECT);
     inline ~thread_pool_t();
-    
-    inline void post(task_t task);
+
+    template <typename Handler>
+    inline void post(Handler handler);
 
 private:
     size_t m_pool_size;

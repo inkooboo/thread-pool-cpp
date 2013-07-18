@@ -2,11 +2,14 @@
 
 #include <thread>
 #include <stdexcept>
+#include <functional>
 
 class thread_pool_t::worker_t : private noncopyable_t
 {
     enum {QUEUE_SIZE = 1024*1024};
 public:
+    typedef std::function<void()> handler_t;
+
     worker_t()
         : m_stop_flag(false)
         , m_thread(&thread_pool_t::worker_t::thread_func, this)
@@ -19,20 +22,20 @@ public:
         m_thread.join();
     }
 
-    bool post(task_t &&task)
+    bool post(handler_t &&handler)
     {
-        return m_queue.move_push(std::move(task));
+        return m_queue.move_push(std::move(handler));
     }
 
 private:
     void thread_func()
     {
-        task_t task;
+        handler_t handler;
         while (!m_stop_flag)
         {
-            if (m_queue.move_pop(task))
+            if (m_queue.move_pop(handler))
             {
-                task();
+                handler();
             }
             else
             {
@@ -41,7 +44,7 @@ private:
         }
     }
 
-    mpsc_bounded_queue_t<task_t, QUEUE_SIZE> m_queue;
+    mpsc_bounded_queue_t<handler_t, QUEUE_SIZE> m_queue;
 
     bool m_stop_flag;
     std::thread m_thread;
@@ -73,9 +76,10 @@ inline thread_pool_t::~thread_pool_t()
     }
 }
 
-inline void thread_pool_t::post(task_t task)
+template <typename Handler>
+inline void thread_pool_t::post(Handler handler)
 {
-    if (!m_pool[m_index++ % m_pool_size]->post(std::move(task)))
+    if (!m_pool[m_index++ % m_pool_size]->post(std::move(handler)))
     {
         throw std::overflow_error("worker queue is full");
     }

@@ -9,7 +9,7 @@
 #include <thread>
 #include <cassert>
 
-static const size_t REPOST_COUNT = 1000000;
+static const size_t REPOST_COUNT = 100000;
 
 struct repost_job_t
 {
@@ -95,6 +95,10 @@ void test_queue()
     assert(queue.move_pop(e) && e == 3);
 }
 
+void test_standalone_func()
+{
+}
+
 int main(int, const char *[])
 {
     using namespace std::placeholders;
@@ -104,11 +108,12 @@ int main(int, const char *[])
     {
         thread_pool_t thread_pool(2);
 
+        thread_pool.post(test_standalone_func);
         thread_pool.post(copy_task_t());
 
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-        repost_job_t::poster_t poster = std::bind(&thread_pool_t::post, &thread_pool, _1);
+        repost_job_t::poster_t poster = std::bind(&thread_pool_t::post<repost_job_t::task_t>, &thread_pool, _1);
 
         thread_pool.post(repost_job_t(&poster));
         thread_pool.post(repost_job_t(&poster));
