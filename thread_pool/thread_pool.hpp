@@ -16,7 +16,7 @@ public:
     inline ~thread_pool_t();
 
     template <typename Handler>
-    inline void post(Handler handler);
+    inline void post(Handler &&handler);
 
 private:
     size_t m_pool_size;

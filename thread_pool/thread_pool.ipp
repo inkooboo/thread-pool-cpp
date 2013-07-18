@@ -77,9 +77,9 @@ inline thread_pool_t::~thread_pool_t()
 }
 
 template <typename Handler>
-inline void thread_pool_t::post(Handler handler)
+inline void thread_pool_t::post(Handler &&handler)
 {
-    if (!m_pool[m_index++ % m_pool_size]->post(std::move(handler)))
+    if (!m_pool[m_index++ % m_pool_size]->post(std::forward<Handler>(handler)))
     {
         throw std::overflow_error("worker queue is full");
     }
