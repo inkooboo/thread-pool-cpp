@@ -13,14 +13,23 @@ static const size_t REPOST_COUNT = 100000;
 
 struct repost_job_t
 {
-    typedef std::function<void()> task_t;
-    typedef std::function<void(task_t&&)> poster_t;
-    poster_t *post_method;
+    thread_pool_t *thread_pool;
+    asio_thread_pool_t *asio_thread_pool;
+
     size_t counter;
     long long int begin_count;
 
-    explicit repost_job_t(poster_t *post_method)
-        : post_method(post_method)
+    explicit repost_job_t(thread_pool_t *thread_pool)
+        : thread_pool(thread_pool)
+        , asio_thread_pool(0)
+        , counter(0)
+    {
+        begin_count = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    }
+
+    explicit repost_job_t(asio_thread_pool_t *asio_thread_pool)
+        : thread_pool(0)
+        , asio_thread_pool(asio_thread_pool)
         , counter(0)
     {
         begin_count = std::chrono::high_resolution_clock::now().time_since_epoch().count();
@@ -30,9 +39,13 @@ struct repost_job_t
     {
         if (counter++ < REPOST_COUNT)
         {
-            if (post_method)
+            if (asio_thread_pool)
             {
-                (*post_method)(*this);
+                asio_thread_pool->post(*this);
+            }
+            if (thread_pool)
+            {
+                thread_pool->post(*this);
             }
         }
         else
@@ -113,12 +126,10 @@ int main(int, const char *[])
 
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-        repost_job_t::poster_t poster = std::bind(&thread_pool_t::post<repost_job_t::task_t>, &thread_pool, _1);
-
-        thread_pool.post(repost_job_t(&poster));
-        thread_pool.post(repost_job_t(&poster));
-        thread_pool.post(repost_job_t(&poster));
-        thread_pool.post(repost_job_t(&poster));
+        thread_pool.post(repost_job_t(&thread_pool));
+        thread_pool.post(repost_job_t(&thread_pool));
+        thread_pool.post(repost_job_t(&thread_pool));
+        thread_pool.post(repost_job_t(&thread_pool));
 
         std::cout << "thread_pool_t" << std::endl;
         std::cout << "See processor usage and hit ENTER to continue" << std::endl;
@@ -128,12 +139,10 @@ int main(int, const char *[])
     {
         asio_thread_pool_t asio_thread_pool(2);
 
-        repost_job_t::poster_t asio_poster = std::bind(&asio_thread_pool_t::post<repost_job_t::task_t>, &asio_thread_pool, _1);
-
-        asio_thread_pool.post(repost_job_t(&asio_poster));
-        asio_thread_pool.post(repost_job_t(&asio_poster));
-        asio_thread_pool.post(repost_job_t(&asio_poster));
-        asio_thread_pool.post(repost_job_t(&asio_poster));
+        asio_thread_pool.post(repost_job_t(&asio_thread_pool));
+        asio_thread_pool.post(repost_job_t(&asio_thread_pool));
+        asio_thread_pool.post(repost_job_t(&asio_thread_pool));
+        asio_thread_pool.post(repost_job_t(&asio_thread_pool));
 
         std::cout << "asio_thread_pool_t" << std::endl;
         std::cout << "See processor usage and hit ENTER to continue" << std::endl;
