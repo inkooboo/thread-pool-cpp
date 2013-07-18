@@ -8,8 +8,6 @@ class thread_pool_t::worker_t : private noncopyable_t
 {
     enum {QUEUE_SIZE = 1024*1024};
 public:
-    typedef std::function<void()> handler_t;
-
     worker_t()
         : m_stop_flag(false)
         , m_thread(&thread_pool_t::worker_t::thread_func, this)
@@ -45,6 +43,7 @@ private:
         }
     }
 
+    typedef std::function<void()> handler_t;
     mpsc_bounded_queue_t<handler_t, QUEUE_SIZE> m_queue;
 
     bool m_stop_flag;
