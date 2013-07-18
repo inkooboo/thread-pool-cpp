@@ -1,5 +1,7 @@
 #include "thread_pool.hpp"
 
+#include "asio_thread_pool.hpp"
+
 #include "mpsc_bounded_queue.hpp"
 
 #include <iostream>
@@ -11,12 +13,14 @@ static const size_t REPOST_COUNT = 1000000;
 
 struct repost_job_t
 {
-    thread_pool_t *thread_pool;
+    typedef std::function<void()> task_t;
+    typedef std::function<void(task_t&&)> poster_t;
+    poster_t *post_method;
     size_t counter;
     long long int begin_count;
 
-    explicit repost_job_t(thread_pool_t *thread_pool)
-        : thread_pool(thread_pool)
+    explicit repost_job_t(poster_t *post_method)
+        : post_method(post_method)
         , counter(0)
     {
         begin_count = std::chrono::high_resolution_clock::now().time_since_epoch().count();
@@ -26,9 +30,9 @@ struct repost_job_t
     {
         if (counter++ < REPOST_COUNT)
         {
-            if (thread_pool)
+            if (post_method)
             {
-                thread_pool->post(*this);
+                (*post_method)(*this);
             }
         }
         else
@@ -93,21 +97,43 @@ void test_queue()
 
 int main(int, const char *[])
 {
+    using namespace std::placeholders;
+
     test_queue();
 
-    thread_pool_t thread_pool;
+    {
+        thread_pool_t thread_pool(2);
 
-    thread_pool.post(copy_task_t());
+        thread_pool.post(copy_task_t());
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    thread_pool.post(repost_job_t(&thread_pool));
-    thread_pool.post(repost_job_t(&thread_pool));
-    thread_pool.post(repost_job_t(&thread_pool));
-    thread_pool.post(repost_job_t(&thread_pool));
+        repost_job_t::poster_t poster = std::bind(&thread_pool_t::post, &thread_pool, _1);
 
-    std::cout << "See processor usage and hit ENTER to continue" << std::endl;
-    std::cin.get();
+        thread_pool.post(repost_job_t(&poster));
+        thread_pool.post(repost_job_t(&poster));
+        thread_pool.post(repost_job_t(&poster));
+        thread_pool.post(repost_job_t(&poster));
+
+        std::cout << "thread_pool_t" << std::endl;
+        std::cout << "See processor usage and hit ENTER to continue" << std::endl;
+        std::cin.get();
+    }
+
+    {
+        asio_thread_pool_t asio_thread_pool(2);
+
+        repost_job_t::poster_t asio_poster = std::bind(&asio_thread_pool_t::post<repost_job_t::task_t>, &asio_thread_pool, _1);
+
+        asio_thread_pool.post(repost_job_t(&asio_poster));
+        asio_thread_pool.post(repost_job_t(&asio_poster));
+        asio_thread_pool.post(repost_job_t(&asio_poster));
+        asio_thread_pool.post(repost_job_t(&asio_poster));
+
+        std::cout << "asio_thread_pool_t" << std::endl;
+        std::cout << "See processor usage and hit ENTER to continue" << std::endl;
+        std::cin.get();
+    }
 
     return 0;
 }
