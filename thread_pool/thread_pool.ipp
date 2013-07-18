@@ -22,9 +22,10 @@ public:
         m_thread.join();
     }
 
-    bool post(handler_t &&handler)
+    template <typename Handler>
+    bool post(Handler &&handler)
     {
-        return m_queue.move_push(std::move(handler));
+        return m_queue.move_push(std::forward<Handler>(handler));
     }
 
 private:
