@@ -29,7 +29,8 @@ public:
         }
     }
 
-    bool move_push(T &&data)
+    template <typename U>
+    bool move_push(U &&data)
     {
         cell_t *cell = nullptr;
         size_t pos = m_enqueue_pos.load(std::memory_order_relaxed);
@@ -48,25 +49,32 @@ public:
             else
                 pos = m_enqueue_pos.load(std::memory_order_relaxed);
         }
-        cell->data = std::move(data);
+
+        cell->data = std::forward<U>(data);
+
         cell->sequence.store(pos + 1, std::memory_order_release);
         return true;
     }
 
-    bool move_pop(T &data)
+    T * front()
     {
         cell_t &cell = m_buffer[m_dequeue_pos & BUFFER_MASK];
         size_t seq = cell.sequence.load(std::memory_order_acquire);
         intptr_t dif = (intptr_t)seq - (intptr_t)(m_dequeue_pos + 1);
         if (dif == 0)
         {
-            ++m_dequeue_pos;
-            data = std::move(cell.data);
-            cell.sequence.store(m_dequeue_pos + BUFFER_MASK, std::memory_order_release);
-            return true;
+            return &cell.data;
         }
 
-        return false;
+        return nullptr;
+    }
+
+    // Can be called ONLY if 'front()' method returned non-null object before
+    void pop()
+    {
+        cell_t &cell = m_buffer[m_dequeue_pos & BUFFER_MASK];
+        ++m_dequeue_pos;
+        cell.sequence.store(m_dequeue_pos + BUFFER_MASK, std::memory_order_release);
     }
 
 private:

@@ -4,7 +4,6 @@
 #include "noncopyable.hpp"
 
 #include <vector>
-#include <memory>
 #include <cstddef>
 
 class thread_pool_t : private noncopyable_t
@@ -23,7 +22,7 @@ private:
     size_t m_index;
 
     class worker_t;
-    std::vector<std::unique_ptr<worker_t>> m_pool;
+    std::vector<worker_t *> m_pool;
 };
 
 #include "thread_pool.ipp"

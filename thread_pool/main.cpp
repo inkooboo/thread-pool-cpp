@@ -10,7 +10,8 @@
 #include <cassert>
 #include <vector>
 
-static const int THREADS_COUNT = 2;
+static const size_t THREADS_COUNT = 2;
+static const size_t CONCURRENCY = 4;
 static const size_t REPOST_COUNT = 100000;
 
 struct heavy_t
@@ -64,6 +65,13 @@ struct heavy_t
         std::cout << "heavy move operator" << std::endl;
         return *this;
     }
+
+//    ~heavy_t()
+//    {
+//        if (!verbose)
+//            return;
+//        std::cout << "heavy destructor" << std::endl;
+//    }
 };
 
 
@@ -131,16 +139,18 @@ struct copy_task_t
 void test_queue()
 {
     mpsc_bounded_queue_t<int, 2> queue;
-    int e = 0;
-    assert(!queue.move_pop(e));
+    assert(!queue.front());
     assert(queue.move_push(1));
     assert(queue.move_push(2));
     assert(!queue.move_push(3));
-    assert(queue.move_pop(e) && e == 1);
-    assert(queue.move_pop(e) && e == 2);
-    assert(!queue.move_pop(e));
+    assert(1 == *queue.front());
+    queue.pop();
+    assert(2 == *queue.front());
+    queue.pop();
+    assert(!queue.front());
     assert(queue.move_push(3));
-    assert(queue.move_pop(e) && e == 3);
+    assert(3 == *queue.front());
+    queue.pop();
 }
 
 void test_standalone_func()
@@ -149,9 +159,8 @@ void test_standalone_func()
 
 struct test_member_t
 {
-    int useless(int i, int j, const heavy_t &heavy)
+    int useless(int i, int j)
     {
-        (void)heavy;
         return i + j;
     }
 
@@ -169,20 +178,17 @@ int main(int, const char *[])
 
         thread_pool_t thread_pool(THREADS_COUNT);
 
-        thread_pool.post(test_standalone_func);
+        thread_pool.post(std::bind(test_standalone_func));
+        thread_pool.post(std::bind(&test_member_t::useless, &test_member, 42, 42));
 
-        std::cout << "Copy test1 [ENTER]" << std::endl;
+        std::cout << "Copy test [ENTER]" << std::endl;
         thread_pool.post(copy_task_t());
         std::cin.get();
 
-        std::cout << "Copy test2 [ENTER]" << std::endl;
-        thread_pool.post(std::bind(&test_member_t::useless, &test_member, 1, 2, heavy_t(true)));
-        std::cin.get();
-
-        thread_pool.post(repost_job_t(&thread_pool));
-        thread_pool.post(repost_job_t(&thread_pool));
-        thread_pool.post(repost_job_t(&thread_pool));
-        thread_pool.post(repost_job_t(&thread_pool));
+        for (size_t i = 0; i < CONCURRENCY; ++i)
+        {
+            thread_pool.post(repost_job_t(&thread_pool));
+        }
 
         std::cout << "Repost test [ENTER]" << std::endl;
         std::cin.get();
@@ -197,10 +203,10 @@ int main(int, const char *[])
         asio_thread_pool.post(copy_task_t());
         std::cin.get();
 
-        asio_thread_pool.post(repost_job_t(&asio_thread_pool));
-        asio_thread_pool.post(repost_job_t(&asio_thread_pool));
-        asio_thread_pool.post(repost_job_t(&asio_thread_pool));
-        asio_thread_pool.post(repost_job_t(&asio_thread_pool));
+        for (size_t i = 0; i < CONCURRENCY; ++i)
+        {
+            asio_thread_pool.post(repost_job_t(&asio_thread_pool));
+        }
 
         std::cout << "Repost test [ENTER]" << std::endl;
         std::cin.get();

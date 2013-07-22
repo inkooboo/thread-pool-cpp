@@ -28,4 +28,5 @@ HEADERS += \
     noncopyable.hpp \
     thread_pool.hpp \
     mpsc_bounded_queue.hpp \
-    asio_thread_pool.hpp
+    asio_thread_pool.hpp \
+    callback.hpp

@@ -1,12 +1,14 @@
 #include "mpsc_bounded_queue.hpp"
 
+#include "callback.hpp"
+
 #include <thread>
 #include <stdexcept>
 #include <functional>
 
 class thread_pool_t::worker_t : private noncopyable_t
 {
-    enum {QUEUE_SIZE = 1024*1024};
+    enum {QUEUE_SIZE = 1024};
 public:
     worker_t()
         : m_stop_flag(false)
@@ -23,18 +25,18 @@ public:
     template <typename Handler>
     bool post(Handler &&handler)
     {
-        return m_queue.move_push(std::move(handler));
+        return m_queue.move_push(std::forward<Handler>(handler));
     }
 
 private:
     void thread_func()
     {
-        handler_t handler;
         while (!m_stop_flag)
         {
-            if (m_queue.move_pop(handler))
+            if (callback_t *handler = m_queue.front())
             {
-                handler();
+                (*handler)();
+                m_queue.pop();
             }
             else
             {
@@ -43,8 +45,7 @@ private:
         }
     }
 
-    typedef std::function<void()> handler_t;
-    mpsc_bounded_queue_t<handler_t, QUEUE_SIZE> m_queue;
+    mpsc_bounded_queue_t<callback_t, QUEUE_SIZE> m_queue;
 
     bool m_stop_flag;
     std::thread m_thread;
@@ -64,7 +65,7 @@ inline thread_pool_t::thread_pool_t(size_t threads_count)
 
     for (auto &worker : m_pool)
     {
-        worker.reset(new worker_t);
+        worker = new worker_t;
     }
 }
 
@@ -73,6 +74,7 @@ inline thread_pool_t::~thread_pool_t()
     for (auto &worker : m_pool)
     {
         worker->stop();
+        delete worker;
     }
 }
 
