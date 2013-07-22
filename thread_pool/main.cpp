@@ -8,11 +8,69 @@
 #include <chrono>
 #include <thread>
 #include <cassert>
+#include <vector>
 
+static const int THREADS_COUNT = 2;
 static const size_t REPOST_COUNT = 100000;
+
+struct heavy_t
+{
+    bool verbose;
+    std::vector<char> resource;
+
+    heavy_t(bool verbose = false)
+        : verbose(verbose)
+        , resource(100*1024*1024)
+    {
+        if (!verbose)
+            return;
+        std::cout << "heavy default constructor" << std::endl;
+    }
+
+    heavy_t(const heavy_t &o)
+        : verbose(o.verbose)
+        , resource(o.resource)
+    {
+        if (!verbose)
+            return;
+        std::cout << "heavy copy constructor" << std::endl;
+    }
+
+    heavy_t(heavy_t &&o)
+        : verbose(o.verbose)
+        , resource(std::move(o.resource))
+    {
+        if (!verbose)
+            return;
+        std::cout << "heavy move constructor" << std::endl;
+    }
+
+    heavy_t & operator==(const heavy_t &o)
+    {
+        verbose = o.verbose;
+        resource = o.resource;
+        if (!verbose)
+            return *this;
+        std::cout << "heavy copy operator" << std::endl;
+        return *this;
+    }
+
+    heavy_t & operator==(const heavy_t &&o)
+    {
+        verbose = o.verbose;
+        resource = std::move(o.resource);
+        if (!verbose)
+            return *this;
+        std::cout << "heavy move operator" << std::endl;
+        return *this;
+    }
+};
+
 
 struct repost_job_t
 {
+    //heavy_t heavy;
+
     thread_pool_t *thread_pool;
     asio_thread_pool_t *asio_thread_pool;
 
@@ -60,36 +118,13 @@ struct repost_job_t
 
 struct copy_task_t
 {
-    copy_task_t()
-    {
-        std::cout << "default constructor" << std::endl;
-    }
+    heavy_t heavy;
 
-    copy_task_t(const copy_task_t &)
-    {
-        std::cout << "copy constructor" << std::endl;
-    }
-
-    copy_task_t(copy_task_t &&)
-    {
-        std::cout << "move constructor" << std::endl;
-    }
-
-    copy_task_t & operator==(const copy_task_t &)
-    {
-        std::cout << "copy operator" << std::endl;
-        return *this;
-    }
-
-    copy_task_t & operator==(const copy_task_t &&)
-    {
-        std::cout << "move operator" << std::endl;
-        return *this;
-    }
+    copy_task_t() : heavy(true) {}
 
     void operator()()
     {
-        std::cout << "operator()()" << std::endl;
+        std::cout << "copy_task_t::operator()()" << std::endl;
     }
 };
 
@@ -112,40 +147,62 @@ void test_standalone_func()
 {
 }
 
+struct test_member_t
+{
+    int useless(int i, int j, const heavy_t &heavy)
+    {
+        (void)heavy;
+        return i + j;
+    }
+
+} test_member;
+
 int main(int, const char *[])
 {
     using namespace std::placeholders;
 
     test_queue();
 
+    std::cout << "*******begin tests*******" << std::endl;
     {
-        thread_pool_t thread_pool(2);
+        std::cout << "***thread_pool_t***" << std::endl;
+
+        thread_pool_t thread_pool(THREADS_COUNT);
 
         thread_pool.post(test_standalone_func);
+
+        std::cout << "Copy test1 [ENTER]" << std::endl;
         thread_pool.post(copy_task_t());
+        std::cin.get();
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::cout << "Copy test2 [ENTER]" << std::endl;
+        thread_pool.post(std::bind(&test_member_t::useless, &test_member, 1, 2, heavy_t(true)));
+        std::cin.get();
 
         thread_pool.post(repost_job_t(&thread_pool));
         thread_pool.post(repost_job_t(&thread_pool));
         thread_pool.post(repost_job_t(&thread_pool));
         thread_pool.post(repost_job_t(&thread_pool));
 
-        std::cout << "thread_pool_t" << std::endl;
-        std::cout << "See processor usage and hit ENTER to continue" << std::endl;
+        std::cout << "Repost test [ENTER]" << std::endl;
         std::cin.get();
     }
 
     {
-        asio_thread_pool_t asio_thread_pool(2);
+        std::cout << "***asio_thread_pool_t***" << std::endl;
+
+        asio_thread_pool_t asio_thread_pool(THREADS_COUNT);
+
+        std::cout << "Copy test [ENTER]" << std::endl;
+        asio_thread_pool.post(copy_task_t());
+        std::cin.get();
 
         asio_thread_pool.post(repost_job_t(&asio_thread_pool));
         asio_thread_pool.post(repost_job_t(&asio_thread_pool));
         asio_thread_pool.post(repost_job_t(&asio_thread_pool));
         asio_thread_pool.post(repost_job_t(&asio_thread_pool));
 
-        std::cout << "asio_thread_pool_t" << std::endl;
-        std::cout << "See processor usage and hit ENTER to continue" << std::endl;
+        std::cout << "Repost test [ENTER]" << std::endl;
         std::cin.get();
     }
 

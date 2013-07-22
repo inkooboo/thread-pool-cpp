@@ -23,8 +23,7 @@ public:
     template <typename Handler>
     bool post(Handler &&handler)
     {
-        handler_t task(handler);
-        return m_queue.move_push(std::move(task));
+        return m_queue.move_push(std::move(handler));
     }
 
 private:
