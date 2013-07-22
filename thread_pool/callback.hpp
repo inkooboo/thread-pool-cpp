@@ -6,7 +6,7 @@
 #include <type_traits>
 #include <cstring>
 
-struct callback_t : noncopyable_t
+struct callback_t : private noncopyable_t
 {
     enum {INTERNAL_STORAGE_SIZE = 64};
 
@@ -27,18 +27,6 @@ struct callback_t : noncopyable_t
         m_object_ptr = new (m_storage) unref_type(std::forward<T>(object));
         m_method_ptr = &method_stub<unref_type>;
         m_delete_ptr = &delete_stub<unref_type>;
-    }
-
-    void move_from_other(callback_t &o)
-    {
-        m_object_ptr = m_storage;
-        m_method_ptr = o.m_method_ptr;
-        m_delete_ptr = o.m_delete_ptr;
-
-        memcpy(m_storage, o.m_storage, INTERNAL_STORAGE_SIZE);
-
-        o.m_method_ptr = nullptr;
-        o.m_delete_ptr = nullptr;
     }
 
     callback_t(callback_t &&o)
@@ -75,6 +63,18 @@ private:
     method_type m_method_ptr;
     method_type m_delete_ptr;
     char m_storage[INTERNAL_STORAGE_SIZE];
+
+    void move_from_other(callback_t &o)
+    {
+        m_object_ptr = m_storage;
+        m_method_ptr = o.m_method_ptr;
+        m_delete_ptr = o.m_delete_ptr;
+
+        memcpy(m_storage, o.m_storage, INTERNAL_STORAGE_SIZE);
+
+        o.m_method_ptr = nullptr;
+        o.m_delete_ptr = nullptr;
+    }
 
     template <class T>
     static void method_stub(void *object_ptr)

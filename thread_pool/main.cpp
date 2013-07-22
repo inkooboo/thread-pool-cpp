@@ -9,6 +9,7 @@
 #include <thread>
 #include <cassert>
 #include <vector>
+#include <future>
 
 static const size_t THREADS_COUNT = 2;
 static const size_t CONCURRENCY = 4;
@@ -85,6 +86,15 @@ struct repost_job_t
     size_t counter;
     long long int begin_count;
 
+    repost_job_t()
+        : thread_pool(0)
+        , asio_thread_pool(0)
+        , counter(0)
+    {
+        begin_count = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    }
+
+
     explicit repost_job_t(thread_pool_t *thread_pool)
         : thread_pool(thread_pool)
         , asio_thread_pool(0)
@@ -108,11 +118,16 @@ struct repost_job_t
             if (asio_thread_pool)
             {
                 asio_thread_pool->post(*this);
+                return;
             }
+
             if (thread_pool)
             {
                 thread_pool->post(*this);
+                return;
             }
+
+            std::async(std::move(*this));
         }
         else
         {
@@ -206,6 +221,22 @@ int main(int, const char *[])
         for (size_t i = 0; i < CONCURRENCY; ++i)
         {
             asio_thread_pool.post(repost_job_t(&asio_thread_pool));
+        }
+
+        std::cout << "Repost test [ENTER]" << std::endl;
+        std::cin.get();
+    }
+
+    {
+        std::cout << "***async***" << std::endl;
+
+        std::cout << "Copy test [ENTER]" << std::endl;
+        std::async(copy_task_t());
+        std::cin.get();
+
+        for (size_t i = 0; i < CONCURRENCY; ++i)
+        {
+            //std::async(repost_job_t());
         }
 
         std::cout << "Repost test [ENTER]" << std::endl;
