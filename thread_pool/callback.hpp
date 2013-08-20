@@ -62,6 +62,8 @@ private:
     void *m_object_ptr;
     method_type m_method_ptr;
     method_type m_delete_ptr;
+    
+    // TODO: ADD strict alignment
     char m_storage[INTERNAL_STORAGE_SIZE];
 
     void move_from_other(callback_t &o)
