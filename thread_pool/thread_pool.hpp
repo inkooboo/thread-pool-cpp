@@ -12,10 +12,10 @@ class thread_pool_t : private noncopyable_t {
 public:
     enum {AUTODETECT = 0};
 
-    inline explicit thread_pool_t(size_t threads_count = AUTODETECT);
+    explicit thread_pool_t(size_t threads_count = AUTODETECT);
 
     template <typename Handler>
-    inline void post(Handler &&handler);
+    void post(Handler &&handler);
 
 private:
     typedef std::unique_ptr<worker_t> worker_ptr;
