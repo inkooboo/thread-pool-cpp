@@ -10,21 +10,17 @@ struct callback_t : private noncopyable_t
 {
     enum {INTERNAL_STORAGE_SIZE = 64};
 
-    callback_t()
-        : m_object_ptr(nullptr)
-        , m_method_ptr(nullptr)
-        , m_delete_ptr(nullptr)
-    {}
-
     template <typename T>
     callback_t(T &&object)
     {
         typedef typename std::remove_reference<T>::type unref_type;
 
-        static_assert(sizeof(unref_type) < INTERNAL_STORAGE_SIZE,
+        const size_t alignment = std::alignment_of<unref_type>::value;
+
+        static_assert(sizeof(unref_type) + alignment < INTERNAL_STORAGE_SIZE,
                       "functional object don't fit into internal storage");
 
-        m_object_ptr = new (m_storage) unref_type(std::forward<T>(object));
+        m_object_ptr = new (m_storage + alignment) unref_type(std::forward<T>(object));
         m_method_ptr = &method_stub<unref_type>;
         m_delete_ptr = &delete_stub<unref_type>;
     }
@@ -57,17 +53,19 @@ struct callback_t : private noncopyable_t
     }
 
 private:
+    char m_storage[INTERNAL_STORAGE_SIZE];
+
+    void *m_object_ptr = m_storage;
+
     typedef void (*method_type)(void *);
 
-    void *m_object_ptr;
-    method_type m_method_ptr;
-    method_type m_delete_ptr;
-
-    alignas(INTERNAL_STORAGE_SIZE) char m_storage[INTERNAL_STORAGE_SIZE];
+    method_type m_method_ptr = nullptr;
+    method_type m_delete_ptr = nullptr;
 
     void move_from_other(callback_t &o)
     {
-        m_object_ptr = m_storage;
+        size_t o_alignment = o.m_method_ptr - o.m_storage;
+        m_object_ptr = m_storage + o_alignment;
         m_method_ptr = o.m_method_ptr;
         m_delete_ptr = o.m_delete_ptr;
 
@@ -80,15 +78,13 @@ private:
     template <class T>
     static void method_stub(void *object_ptr)
     {
-        T *p = static_cast<T *>(object_ptr);
-        p->operator()();
+        static_cast<T *>(object_ptr)->operator()();
     }
 
     template <class T>
     static void delete_stub(void *object_ptr)
     {
-        T *p = static_cast<T *>(object_ptr);
-        p->~T();
+        static_cast<T *>(object_ptr)->~T();
     }
 };
 
