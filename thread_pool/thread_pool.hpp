@@ -2,33 +2,58 @@
 #define THREAD_POOL_HPP
 
 #include <noncopyable.hpp>
-#include <vector>
+#include <worker.hpp>
+#include <work_distributor.hpp>
 #include <memory>
-#include <atomic>
+#include <stdexcept>
+#include <vector>
 
-template <size_t> class worker_t;
-
-class thread_pool_t : private noncopyable_t
-{
+class thread_pool_t : private noncopyable_t {
 public:
     enum {AUTODETECT = 0};
-    enum {WORKER_QUEUE_SIZE = 1024};
 
     inline explicit thread_pool_t(size_t threads_count = AUTODETECT);
-    inline ~thread_pool_t();
 
     template <typename Handler>
     inline void post(Handler &&handler);
 
 private:
-    size_t m_pool_size;
-    std::atomic<size_t> m_index;
-
-    typedef std::unique_ptr<worker_t<WORKER_QUEUE_SIZE>> worker_ptr;
+    typedef std::unique_ptr<worker_t> worker_ptr;
     std::vector<worker_ptr> m_pool;
+
+    work_distributor_t m_distributor;
 };
 
-#include "thread_pool.ipp"
+
+/// Implementation
+
+inline thread_pool_t::thread_pool_t(size_t threads_count)
+{
+    if (AUTODETECT == threads_count) {
+        threads_count = std::thread::hardware_concurrency();
+    }
+
+    if (0 == threads_count) {
+        threads_count = 1;
+    }
+
+    m_pool.resize(threads_count);
+
+    for (auto &worker : m_pool) {
+        worker.reset(new worker_t);
+        m_distributor.add_worker(worker.get());
+    }
+}
+
+template <typename Handler>
+inline void thread_pool_t::post(Handler &&handler)
+{
+    worker_t *chosen = m_distributor.get_worker();
+    if (!chosen->post(std::forward<Handler>(handler)))
+    {
+        throw std::overflow_error("worker queue is full");
+    }
+}
 
 #endif
 

@@ -4,11 +4,17 @@
 #include <noncopyable.hpp>
 #include <type_traits>
 #include <cstring>
+#include <utility>
 
 template <size_t STORAGE_SIZE>
-struct callback_t : private noncopyable_t
-{
-    callback_t() = default;
+class callback_t : private noncopyable_t {
+public:
+    callback_t()
+        : m_object_ptr(&m_storage)
+        , m_method_ptr(nullptr)
+        , m_delete_ptr(nullptr)
+    {
+    }
 
     template <typename T>
     callback_t(T &&object)
@@ -51,12 +57,12 @@ struct callback_t : private noncopyable_t
 private:
     typename std::aligned_storage<STORAGE_SIZE, STORAGE_SIZE>::type m_storage;
 
-    void *m_object_ptr = &m_storage;
+    void *m_object_ptr;
 
     typedef void (*method_type)(void *);
 
-    method_type m_method_ptr = nullptr;
-    method_type m_delete_ptr = nullptr;
+    method_type m_method_ptr;
+    method_type m_delete_ptr;
 
     void move_from_other(callback_t &o)
     {
