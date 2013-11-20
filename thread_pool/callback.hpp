@@ -6,10 +6,9 @@
 #include <type_traits>
 #include <cstring>
 
+template <size_t STORAGE_SIZE = 32>
 struct callback_t : private noncopyable_t
 {
-    enum {INTERNAL_STORAGE_SIZE = 64};
-
     template <typename T>
     callback_t(T &&object)
     {
@@ -17,7 +16,7 @@ struct callback_t : private noncopyable_t
 
         const size_t alignment = std::alignment_of<unref_type>::value;
 
-        static_assert(sizeof(unref_type) + alignment < INTERNAL_STORAGE_SIZE,
+        static_assert(sizeof(unref_type) + alignment < STORAGE_SIZE,
                       "functional object don't fit into internal storage");
 
         m_object_ptr = new (m_storage + alignment) unref_type(std::forward<T>(object));
@@ -38,22 +37,20 @@ struct callback_t : private noncopyable_t
 
     ~callback_t()
     {
-        if (m_delete_ptr)
-        {
+        if (m_delete_ptr) {
             (*m_delete_ptr)(m_object_ptr);
         }
     }
 
     void operator()() const
     {
-        if (m_method_ptr)
-        {
+        if (m_method_ptr) {
             (*m_method_ptr)(m_object_ptr);
         }
     }
 
 private:
-    char m_storage[INTERNAL_STORAGE_SIZE];
+    char m_storage[STORAGE_SIZE];
 
     void *m_object_ptr = m_storage;
 
@@ -64,12 +61,12 @@ private:
 
     void move_from_other(callback_t &o)
     {
-        size_t o_alignment = o.m_method_ptr - o.m_storage;
+        const size_t o_alignment = o.m_method_ptr - o.m_storage;
         m_object_ptr = m_storage + o_alignment;
         m_method_ptr = o.m_method_ptr;
         m_delete_ptr = o.m_delete_ptr;
 
-        memcpy(m_storage, o.m_storage, INTERNAL_STORAGE_SIZE);
+        memcpy(m_storage, o.m_storage, STORAGE_SIZE);
 
         o.m_method_ptr = nullptr;
         o.m_delete_ptr = nullptr;
