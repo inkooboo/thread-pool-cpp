@@ -1,8 +1,5 @@
 #include <mpsc_bounded_queue.hpp>
 #include <callback.hpp>
-#include <condition_variable>
-#include <functional>
-#include <mutex>
 #include <stdexcept>
 #include <thread>
 
@@ -12,10 +9,13 @@ class worker_t : private noncopyable_t
 public:
     worker_t()
         : m_stop_flag(false)
-        , m_sleeping(false)
+        , m_starting(true)
     {
         m_thread = std::thread(&worker_t::thread_func, this);
-        while(!m_sleeping);
+        post([&](){m_starting = false;});
+        while(m_starting) {
+            std::this_thread::yield();
+        }
     }
 
     void stop()
@@ -25,26 +25,41 @@ public:
     }
 
     template <typename Handler>
-    size_t post(Handler &&handler)
+    bool post(Handler &&handler)
     {
-        if (!m_sleeping.load(std::memory_order_acquire)) {
-            return m_queue.move_push(std::forward<Handler>(handler));
-        }
-        std::lock_guard<std::mutex> slock(m_job_mutex);
-        size_t rc = m_queue.move_push(std::forward<Handler>(handler));
-        if (m_sleeping.load(std::memory_order_acquire)) {
-            m_has_job.notify_one();
-        }
-        return rc;
+        return m_queue.push(std::forward<Handler>(handler));
     }
 
 private:
     typedef callback_t<32> func_t;
 
+    struct progressive_waiter_t {
+        void reset() {
+            m_counter = 0;
+        }
+
+        void wait() {
+            ++m_counter;
+            if (m_counter < 1000)
+            {
+                std::this_thread::yield();
+            }
+            else {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+        }
+
+    private:
+        int m_counter = 0;
+    };
+
     void thread_func()
     {
+        progressive_waiter_t waiter;
+
         while (!m_stop_flag) {
             if (func_t *handler = m_queue.front()) {
+                waiter.reset();
                 try {
                     (*handler)();
                 }
@@ -53,14 +68,7 @@ private:
                 m_queue.pop();
             }
             else {
-                std::unique_lock<std::mutex> ulock(m_job_mutex);
-                m_sleeping.store(true, std::memory_order_release);
-                if (m_queue.front()) {
-                    m_sleeping.store(false, std::memory_order_release);
-                    continue;
-                }
-                m_has_job.wait(ulock);
-                m_sleeping.store(false, std::memory_order_release);
+                waiter.wait();
             }
         }
     }
@@ -71,9 +79,7 @@ private:
 
     std::thread m_thread;
 
-    std::atomic<bool> m_sleeping;
-    std::mutex m_job_mutex;
-    std::condition_variable m_has_job;
+    std::atomic<bool> m_starting;
 };
 
 inline thread_pool_t::thread_pool_t(size_t threads_count)
@@ -105,7 +111,7 @@ inline thread_pool_t::~thread_pool_t()
 template <typename Handler>
 inline void thread_pool_t::post(Handler &&handler)
 {
-    if (-1u == m_pool[m_index++ % m_pool_size]->post(std::forward<Handler>(handler)))
+    if (!m_pool[m_index++ % m_pool_size]->post(std::forward<Handler>(handler)))
     {
         throw std::overflow_error("worker queue is full");
     }

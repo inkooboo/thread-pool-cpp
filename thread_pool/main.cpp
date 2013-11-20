@@ -153,15 +153,15 @@ void test_queue()
 {
     mpsc_bounded_queue_t<int, 2> queue;
     assert(!queue.front());
-    assert(1 == queue.move_push(1));
-    assert(2 == queue.move_push(2));
-    assert(-1u == queue.move_push(3));
+    assert(queue.push(1));
+    assert(queue.push(2));
+    assert(!queue.push(3));
     assert(1 == *queue.front());
     queue.pop();
     assert(2 == *queue.front());
     queue.pop();
     assert(!queue.front());
-    assert(1 == queue.move_push(3));
+    assert(queue.push(3));
     assert(3 == *queue.front());
     queue.pop();
 }

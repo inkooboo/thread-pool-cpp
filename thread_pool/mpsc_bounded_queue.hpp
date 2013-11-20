@@ -19,7 +19,7 @@ public:
         : m_enqueue_pos(0)
         , m_dequeue_pos(0)
     {
-        static_assert(std::is_move_constructible<T>::value, "Should be movable type");
+        static_assert(std::is_move_constructible<T>::value, "Should be of movable type");
         static_assert((BUFFER_SIZE >= 2) && ((BUFFER_SIZE & (BUFFER_SIZE - 1)) == 0),
                       "buffer size should be a power of 2");
 
@@ -30,7 +30,7 @@ public:
     }
 
     template <typename U>
-    size_t move_push(U &&data)
+    bool push(U &&data)
     {
         cell_t *cell = nullptr;
         size_t pos = m_enqueue_pos.load(std::memory_order_relaxed);
@@ -45,7 +45,7 @@ public:
                 }
             }
             else if (dif < 0) {
-                return -1u;
+                return false;
             }
             else {
                 pos = m_enqueue_pos.load(std::memory_order_relaxed);
@@ -55,7 +55,7 @@ public:
         cell->data = std::forward<U>(data);
 
         cell->sequence.store(pos + 1, std::memory_order_release);
-        return pos + 1 - m_dequeue_pos.load(std::memory_order_relaxed);
+        return true;
     }
 
     T * front()
