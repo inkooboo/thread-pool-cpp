@@ -15,12 +15,10 @@ struct callback_t : private noncopyable_t
     {
         typedef typename std::remove_reference<T>::type unref_type;
 
-        const size_t alignment = std::alignment_of<unref_type>::value;
-
-        static_assert(sizeof(unref_type) + alignment < STORAGE_SIZE,
+        static_assert(sizeof(unref_type) < STORAGE_SIZE,
                       "functional object don't fit into internal storage");
 
-        m_object_ptr = new (m_storage + alignment) unref_type(std::forward<T>(object));
+        m_object_ptr = new (&m_storage) unref_type(std::forward<T>(object));
         m_method_ptr = &method_stub<unref_type>;
         m_delete_ptr = &delete_stub<unref_type>;
     }
@@ -51,9 +49,9 @@ struct callback_t : private noncopyable_t
     }
 
 private:
-    char m_storage[STORAGE_SIZE];
+    typename std::aligned_storage<STORAGE_SIZE, STORAGE_SIZE>::type m_storage;
 
-    void *m_object_ptr = m_storage;
+    void *m_object_ptr = &m_storage;
 
     typedef void (*method_type)(void *);
 
@@ -62,12 +60,10 @@ private:
 
     void move_from_other(callback_t &o)
     {
-        const size_t o_alignment = static_cast<char *>(o.m_object_ptr) - o.m_storage;
-        m_object_ptr = m_storage + o_alignment;
         m_method_ptr = o.m_method_ptr;
         m_delete_ptr = o.m_delete_ptr;
 
-        memcpy(m_storage, o.m_storage, STORAGE_SIZE);
+        memcpy(&m_storage, &o.m_storage, STORAGE_SIZE);
 
         o.m_method_ptr = nullptr;
         o.m_delete_ptr = nullptr;

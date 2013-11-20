@@ -39,7 +39,7 @@ public:
     }
 
 private:
-    typedef callback_t<64> func_t;
+    typedef callback_t<32> func_t;
 
     void thread_func()
     {
