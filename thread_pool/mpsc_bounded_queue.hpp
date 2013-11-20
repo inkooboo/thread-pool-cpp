@@ -1,7 +1,7 @@
 #ifndef mpsc_queue_h
 #define mpsc_queue_h
 
-#include "noncopyable.hpp"
+#include <noncopyable.hpp>
 
 #include <atomic>
 #include <type_traits>
@@ -30,37 +30,39 @@ public:
     }
 
     template <typename U>
-    bool move_push(U &&data)
+    size_t move_push(U &&data)
     {
         cell_t *cell = nullptr;
         size_t pos = m_enqueue_pos.load(std::memory_order_relaxed);
-        for (;;)
-        {
+        for (;;) {
             cell = &m_buffer[pos & BUFFER_MASK];
             size_t seq = cell->sequence.load(std::memory_order_acquire);
             intptr_t dif = (intptr_t)seq - (intptr_t)pos;
             if (dif == 0)
             {
-                if (m_enqueue_pos.compare_exchange_weak(pos, pos + 1, std::memory_order_relaxed))
+                if (m_enqueue_pos.compare_exchange_weak(pos, pos + 1, std::memory_order_relaxed)) {
                     break;
+                }
             }
-            else if (dif < 0)
-                return false;
-            else
+            else if (dif < 0) {
+                return -1u;
+            }
+            else {
                 pos = m_enqueue_pos.load(std::memory_order_relaxed);
+            }
         }
 
         cell->data = std::forward<U>(data);
 
         cell->sequence.store(pos + 1, std::memory_order_release);
-        return true;
+        return pos + 1 - m_dequeue_pos.load(std::memory_order_relaxed);
     }
 
     T * front()
     {
-        cell_t &cell = m_buffer[m_dequeue_pos & BUFFER_MASK];
+        cell_t &cell = m_buffer[m_dequeue_pos.load(std::memory_order_relaxed) & BUFFER_MASK];
         size_t seq = cell.sequence.load(std::memory_order_acquire);
-        intptr_t dif = (intptr_t)seq - (intptr_t)(m_dequeue_pos + 1);
+        intptr_t dif = (intptr_t)seq - (intptr_t)(m_dequeue_pos.load(std::memory_order_relaxed) + 1);
         if (dif == 0)
         {
             return &cell.data;
@@ -72,9 +74,9 @@ public:
     // Can be called ONLY if 'front()' method returned non-null object before
     void pop()
     {
-        cell_t &cell = m_buffer[m_dequeue_pos & BUFFER_MASK];
-        ++m_dequeue_pos;
-        cell.sequence.store(m_dequeue_pos + BUFFER_MASK, std::memory_order_release);
+        cell_t &cell = m_buffer[m_dequeue_pos.load(std::memory_order_relaxed) & BUFFER_MASK];
+        m_dequeue_pos.fetch_add(1, std::memory_order_relaxed);
+        cell.sequence.store(m_dequeue_pos.load(std::memory_order_relaxed) + BUFFER_MASK, std::memory_order_release);
     }
 
 private:
@@ -91,7 +93,7 @@ private:
     cacheline_pad_t  pad1;
     std::atomic<size_t> m_enqueue_pos;
     cacheline_pad_t pad2;
-    size_t m_dequeue_pos;
+    std::atomic<size_t> m_dequeue_pos;
     cacheline_pad_t pad3;
 };
 

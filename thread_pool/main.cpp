@@ -1,8 +1,8 @@
-#include "thread_pool.hpp"
+#include <thread_pool.hpp>
 
-#include "asio_thread_pool.hpp"
+#include <asio_thread_pool.hpp>
 
-#include "mpsc_bounded_queue.hpp"
+#include <mpsc_bounded_queue.hpp>
 
 #include <iostream>
 #include <chrono>
@@ -126,8 +126,6 @@ struct repost_job_t
                 thread_pool->post(*this);
                 return;
             }
-
-            std::async(std::move(*this));
         }
         else
         {
@@ -155,15 +153,15 @@ void test_queue()
 {
     mpsc_bounded_queue_t<int, 2> queue;
     assert(!queue.front());
-    assert(queue.move_push(1));
-    assert(queue.move_push(2));
-    assert(!queue.move_push(3));
+    assert(1 == queue.move_push(1));
+    assert(2 == queue.move_push(2));
+    assert(-1u == queue.move_push(3));
     assert(1 == *queue.front());
     queue.pop();
     assert(2 == *queue.front());
     queue.pop();
     assert(!queue.front());
-    assert(queue.move_push(3));
+    assert(1 == queue.move_push(3));
     assert(3 == *queue.front());
     queue.pop();
 }
@@ -196,9 +194,9 @@ int main(int, const char *[])
         thread_pool.post(std::bind(test_standalone_func));
         thread_pool.post(std::bind(&test_member_t::useless, &test_member, 42, 42));
 
-        std::cout << "Copy test [ENTER]" << std::endl;
-        thread_pool.post(copy_task_t());
-        std::cin.get();
+//        std::cout << "Copy test [ENTER]" << std::endl;
+//        thread_pool.post(copy_task_t());
+//        std::cin.get();
 
         for (size_t i = 0; i < CONCURRENCY; ++i)
         {
@@ -214,29 +212,13 @@ int main(int, const char *[])
 
         asio_thread_pool_t asio_thread_pool(THREADS_COUNT);
 
-        std::cout << "Copy test [ENTER]" << std::endl;
-        asio_thread_pool.post(copy_task_t());
-        std::cin.get();
+//        std::cout << "Copy test [ENTER]" << std::endl;
+//        asio_thread_pool.post(copy_task_t());
+//        std::cin.get();
 
         for (size_t i = 0; i < CONCURRENCY; ++i)
         {
             asio_thread_pool.post(repost_job_t(&asio_thread_pool));
-        }
-
-        std::cout << "Repost test [ENTER]" << std::endl;
-        std::cin.get();
-    }
-
-    {
-        std::cout << "***async***" << std::endl;
-
-        std::cout << "Copy test [ENTER]" << std::endl;
-        std::async(copy_task_t());
-        std::cin.get();
-
-        for (size_t i = 0; i < CONCURRENCY; ++i)
-        {
-            //std::async(repost_job_t());
         }
 
         std::cout << "Repost test [ENTER]" << std::endl;

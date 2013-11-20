@@ -1,9 +1,3 @@
-//
-//  noncopyable.hpp
-//
-//  Created by Andrey Kubarkov on 7/18/12.
-//
-
 #ifndef noncopyable_hpp
 #define noncopyable_hpp
 

@@ -1,14 +1,15 @@
 #ifndef CALLBACK_HPP
 #define CALLBACK_HPP
 
-#include "noncopyable.hpp"
-
+#include <noncopyable.hpp>
 #include <type_traits>
 #include <cstring>
 
-template <size_t STORAGE_SIZE = 32>
+template <size_t STORAGE_SIZE>
 struct callback_t : private noncopyable_t
 {
+    callback_t() = default;
+
     template <typename T>
     callback_t(T &&object)
     {
@@ -61,7 +62,7 @@ private:
 
     void move_from_other(callback_t &o)
     {
-        const size_t o_alignment = o.m_method_ptr - o.m_storage;
+        const size_t o_alignment = static_cast<char *>(o.m_object_ptr) - o.m_storage;
         m_object_ptr = m_storage + o_alignment;
         m_method_ptr = o.m_method_ptr;
         m_delete_ptr = o.m_delete_ptr;
