@@ -1,7 +1,7 @@
 thread-pool-cpp11
 =================
 
-C++11 compatible *fast :P* thread pool based on lock-free queue.
+C++11 compatible *fast :P* thread pool.
 
 Post job to thread pool is 5-6 times faster than for boost::asio based thread pool.
 

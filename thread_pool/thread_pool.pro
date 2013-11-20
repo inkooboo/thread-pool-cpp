@@ -26,9 +26,10 @@ SOURCES += main.cpp \
 HEADERS += \
     noncopyable.hpp \
     thread_pool.hpp \
-    mpsc_bounded_queue.hpp \
     asio_thread_pool.hpp \
     callback.hpp \
     work_distributor.hpp \
     worker.hpp \
-    progressive_waiter.hpp
+    progressive_waiter.hpp \
+    mpsc_bounded_blocking_queue.hpp \
+    mpsc_bounded_queue.hpp
