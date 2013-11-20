@@ -1,9 +1,10 @@
-#ifndef thread_pool_hpp
-#define thread_pool_hpp
+#ifndef THREAD_POOL_HPP
+#define THREAD_POOL_HPP
 
 #include <noncopyable.hpp>
 #include <vector>
 #include <memory>
+#include <atomic>
 
 template <size_t> class worker_t;
 
@@ -21,7 +22,7 @@ public:
 
 private:
     size_t m_pool_size;
-    size_t m_index;
+    std::atomic<size_t> m_index;
 
     typedef std::unique_ptr<worker_t<WORKER_QUEUE_SIZE>> worker_ptr;
     std::vector<worker_ptr> m_pool;
@@ -29,5 +30,5 @@ private:
 
 #include "thread_pool.ipp"
 
-#endif //thread_pool_hpp
+#endif
 

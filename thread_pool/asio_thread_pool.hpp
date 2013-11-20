@@ -79,4 +79,4 @@ inline void asio_thread_pool_t::worker_thread_func()
     join_thread_pool();
 }
 
-#endif // ASIO_THREAD_POOL_HPP
+#endif

@@ -83,4 +83,4 @@ private:
 };
 
 
-#endif // CALLBACK_HPP
+#endif

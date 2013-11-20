@@ -13,7 +13,7 @@
 
 static const size_t THREADS_COUNT = 2;
 static const size_t CONCURRENCY = 4;
-static const size_t REPOST_COUNT = 1000000;
+static const size_t REPOST_COUNT = 100000;
 
 struct heavy_t
 {

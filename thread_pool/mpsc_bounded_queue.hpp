@@ -1,5 +1,5 @@
-#ifndef mpsc_queue_h
-#define mpsc_queue_h
+#ifndef MPSC_QUEUE_HPP
+#define MPSC_QUEUE_HPP
 
 #include <noncopyable.hpp>
 
