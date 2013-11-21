@@ -20,8 +20,7 @@ LIBS += -L../boost_1_54_0/stage/lib
 
 win32:LIBS += -lboost_system-mgw47-mt-sd-1_54 -lws2_32 -lmswsock
 
-SOURCES += main.cpp \
-    test_header_only.cpp
+SOURCES += main.cpp
 
 HEADERS += \
     noncopyable.hpp \
@@ -31,5 +30,4 @@ HEADERS += \
     work_distributor.hpp \
     worker.hpp \
     progressive_waiter.hpp \
-    mpsc_bounded_blocking_queue.hpp \
     mpsc_bounded_queue.hpp

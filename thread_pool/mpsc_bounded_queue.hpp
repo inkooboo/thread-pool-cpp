@@ -37,7 +37,7 @@ private:
     cacheline_pad_t pad1;
     std::atomic<size_t> m_enqueue_pos;
     cacheline_pad_t pad2;
-    std::atomic<size_t> m_dequeue_pos;
+    size_t m_dequeue_pos;
     cacheline_pad_t pad3;
 };
 
@@ -69,8 +69,7 @@ inline bool mpsc_bounded_queue_t<T, BUFFER_SIZE>::push(U &&data)
         cell = &m_buffer[pos & BUFFER_MASK];
         size_t seq = cell->sequence.load(std::memory_order_acquire);
         intptr_t dif = (intptr_t)seq - (intptr_t)pos;
-        if (dif == 0)
-        {
+        if (dif == 0) {
             if (m_enqueue_pos.compare_exchange_weak(pos, pos + 1, std::memory_order_relaxed)) {
                 break;
             }
@@ -92,23 +91,19 @@ inline bool mpsc_bounded_queue_t<T, BUFFER_SIZE>::push(U &&data)
 template <typename T, unsigned BUFFER_SIZE>
 inline T * mpsc_bounded_queue_t<T, BUFFER_SIZE>::front()
 {
-    cell_t &cell = m_buffer[m_dequeue_pos.load(std::memory_order_relaxed) & BUFFER_MASK];
-    size_t seq = cell.sequence.load(std::memory_order_acquire);
-    intptr_t dif = (intptr_t)seq - (intptr_t)(m_dequeue_pos.load(std::memory_order_relaxed) + 1);
-    if (dif == 0)
-    {
-        return &cell.data;
+    cell_t &cell = m_buffer[m_dequeue_pos & BUFFER_MASK];
+    size_t seq = cell.sequence.load(std::memory_order_relaxed);
+    if (1 != (intptr_t)seq - (intptr_t)m_dequeue_pos) {
+        return nullptr;
     }
-
-    return nullptr;
+    return &cell.data;
 }
 
 template <typename T, unsigned BUFFER_SIZE>
 inline void mpsc_bounded_queue_t<T, BUFFER_SIZE>::pop()
 {
-    cell_t &cell = m_buffer[m_dequeue_pos.load(std::memory_order_relaxed) & BUFFER_MASK];
-    m_dequeue_pos.fetch_add(1, std::memory_order_relaxed);
-    cell.sequence.store(m_dequeue_pos.load(std::memory_order_relaxed) + BUFFER_MASK, std::memory_order_release);
+    cell_t &cell = m_buffer[m_dequeue_pos++ & BUFFER_MASK];
+    cell.sequence.store(m_dequeue_pos + BUFFER_MASK, std::memory_order_release);
 }
 
 #endif

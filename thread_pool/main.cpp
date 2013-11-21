@@ -15,8 +15,7 @@ static const size_t THREADS_COUNT = 2;
 static const size_t CONCURRENCY = 4;
 static const size_t REPOST_COUNT = 100000;
 
-struct heavy_t
-{
+struct heavy_t {
     bool verbose;
     std::vector<char> resource;
 
@@ -24,36 +23,36 @@ struct heavy_t
         : verbose(verbose)
         , resource(100*1024*1024)
     {
-        if (!verbose)
-            return;
-        std::cout << "heavy default constructor" << std::endl;
+        if (verbose) {
+            std::cout << "heavy default constructor" << std::endl;
+        }
     }
 
     heavy_t(const heavy_t &o)
         : verbose(o.verbose)
         , resource(o.resource)
     {
-        if (!verbose)
-            return;
-        std::cout << "heavy copy constructor" << std::endl;
+        if (verbose) {
+            std::cout << "heavy copy constructor" << std::endl;
+        }
     }
 
     heavy_t(heavy_t &&o)
         : verbose(o.verbose)
         , resource(std::move(o.resource))
     {
-        if (!verbose)
-            return;
-        std::cout << "heavy move constructor" << std::endl;
+        if (verbose) {
+            std::cout << "heavy move constructor" << std::endl;
+        }
     }
 
     heavy_t & operator==(const heavy_t &o)
     {
         verbose = o.verbose;
         resource = o.resource;
-        if (!verbose)
-            return *this;
-        std::cout << "heavy copy operator" << std::endl;
+        if (verbose) {
+            std::cout << "heavy copy operator" << std::endl;
+        }
         return *this;
     }
 
@@ -61,23 +60,22 @@ struct heavy_t
     {
         verbose = o.verbose;
         resource = std::move(o.resource);
-        if (!verbose)
-            return *this;
-        std::cout << "heavy move operator" << std::endl;
+        if (verbose) {
+            std::cout << "heavy move operator" << std::endl;
+        }
         return *this;
     }
 
 //    ~heavy_t()
 //    {
-//        if (!verbose)
-//            return;
-//        std::cout << "heavy destructor" << std::endl;
+//        if (verbose) {
+//            std::cout << "heavy destructor" << std::endl;
+//        }
 //    }
 };
 
 
-struct repost_job_t
-{
+struct repost_job_t {
     //heavy_t heavy;
 
     thread_pool_t *thread_pool;
@@ -113,22 +111,18 @@ struct repost_job_t
 
     void operator()()
     {
-        if (counter++ < REPOST_COUNT)
-        {
-            if (asio_thread_pool)
-            {
+        if (counter++ < REPOST_COUNT) {
+            if (asio_thread_pool) {
                 asio_thread_pool->post(*this);
                 return;
             }
 
-            if (thread_pool)
-            {
+            if (thread_pool) {
                 thread_pool->post(*this);
                 return;
             }
         }
-        else
-        {
+        else {
             long long int end_count = std::chrono::high_resolution_clock::now().time_since_epoch().count();
             std::cout << "reposted " << counter
                       << " in " << (double)(end_count - begin_count)/(double)1000000 << " ms"
@@ -198,8 +192,7 @@ int main(int, const char *[])
 //        thread_pool.post(copy_task_t());
 //        std::cin.get();
 
-        for (size_t i = 0; i < CONCURRENCY; ++i)
-        {
+        for (size_t i = 0; i < CONCURRENCY; ++i) {
             thread_pool.post(repost_job_t(&thread_pool));
         }
 
@@ -216,8 +209,7 @@ int main(int, const char *[])
 //        asio_thread_pool.post(copy_task_t());
 //        std::cin.get();
 
-        for (size_t i = 0; i < CONCURRENCY; ++i)
-        {
+        for (size_t i = 0; i < CONCURRENCY; ++i) {
             asio_thread_pool.post(repost_job_t(&asio_thread_pool));
         }
 
