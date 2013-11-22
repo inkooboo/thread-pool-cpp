@@ -18,7 +18,7 @@ TEMPLATE = app
 INCLUDEPATH += ../boost_1_54_0
 LIBS += -L../boost_1_54_0/stage/lib
 
-win32:LIBS += -lboost_system-mgw47-mt-sd-1_54 -lws2_32 -lmswsock
+win32:LIBS += -lboost_system-mgw48-mt-s-1_54 -lws2_32 -lmswsock
 
 SOURCES += main.cpp
 

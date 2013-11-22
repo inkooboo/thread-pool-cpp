@@ -15,7 +15,9 @@ public:
 
     ~worker_t();
 
-    size_t task_counter();
+    size_t task_counter() const;
+
+    const std::thread::id & thread_id() const;
 
     template <typename Handler>
     bool post(Handler &&handler);
@@ -29,6 +31,7 @@ private:
     std::thread m_thread;
     std::atomic<bool> m_starting;
     std::atomic<size_t> m_task_counter;
+    std::thread::id m_thread_id;
 };
 
 
@@ -45,6 +48,8 @@ inline worker_t::worker_t()
     while(m_starting) {
         std::this_thread::yield();
     }
+
+    m_thread_id = m_thread.get_id();
 }
 
 inline worker_t::~worker_t()
@@ -53,8 +58,14 @@ inline worker_t::~worker_t()
     m_thread.join();
 }
 
-inline size_t worker_t::task_counter() {
+inline size_t worker_t::task_counter() const
+{
     return m_task_counter.load(std::memory_order_relaxed);
+}
+
+inline const std::thread::id & worker_t::thread_id() const
+{
+    return m_thread_id;
 }
 
 template <typename Handler>
