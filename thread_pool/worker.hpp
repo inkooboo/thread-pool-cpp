@@ -11,45 +11,38 @@ class worker_t : private noncopyable_t
 {
     enum {QUEUE_SIZE = 1024};
 public:
-    worker_t();
+    worker_t(int id);
 
     ~worker_t();
 
-    size_t task_counter() const;
-
-    const std::thread::id & thread_id() const;
+    static int get_id();
 
     template <typename Handler>
     bool post(Handler &&handler);
 
 private:
-    void thread_func();
+    void thread_func(int id);
 
     typedef callback_t<32> func_t;
     mpsc_bounded_queue_t<func_t, QUEUE_SIZE> m_queue;
     bool m_stop_flag;
     std::thread m_thread;
     std::atomic<bool> m_starting;
-    std::atomic<size_t> m_task_counter;
-    std::thread::id m_thread_id;
 };
 
 
 
 /// Implementation
 
-inline worker_t::worker_t()
+inline worker_t::worker_t(int id)
     : m_stop_flag(false)
     , m_starting(true)
-    , m_task_counter(0)
 {
-    m_thread = std::thread(&worker_t::thread_func, this);
+    m_thread = std::thread(&worker_t::thread_func, this, id);
     post([&](){m_starting = false;});
     while(m_starting) {
         std::this_thread::yield();
     }
-
-    m_thread_id = m_thread.get_id();
 }
 
 inline worker_t::~worker_t()
@@ -58,29 +51,29 @@ inline worker_t::~worker_t()
     m_thread.join();
 }
 
-inline size_t worker_t::task_counter() const
+
+inline static int * thread_id()
 {
-    return m_task_counter.load(std::memory_order_relaxed);
+    static thread_local int tss_id = -1;
+    return &tss_id;
 }
 
-inline const std::thread::id & worker_t::thread_id() const
+inline int worker_t::get_id()
 {
-    return m_thread_id;
+    return *thread_id();
 }
 
 template <typename Handler>
 inline bool worker_t::post(Handler &&handler)
 {
-    bool rc = m_queue.push(std::forward<Handler>(handler));
-    if (rc) {
-        m_task_counter.fetch_add(1, std::memory_order_relaxed);
-    }
-    return rc;
+    return m_queue.push(std::forward<Handler>(handler));
 }
 
-inline void worker_t::thread_func()
+inline void worker_t::thread_func(int id)
 {
     progressive_waiter_t waiter;
+
+    *thread_id() = id;
 
     while (!m_stop_flag) {
         if (func_t *handler = m_queue.front()) {
@@ -91,8 +84,6 @@ inline void worker_t::thread_func()
             catch (...) {
             }
             m_queue.pop();
-
-            m_task_counter.fetch_sub(1, std::memory_order_relaxed);
         }
         else {
             waiter.wait();

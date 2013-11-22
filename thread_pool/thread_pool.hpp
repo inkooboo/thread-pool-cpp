@@ -3,7 +3,6 @@
 
 #include <noncopyable.hpp>
 #include <worker.hpp>
-#include <work_distributor.hpp>
 #include <memory>
 #include <stdexcept>
 #include <vector>
@@ -19,9 +18,12 @@ public:
 
 private:
     typedef std::unique_ptr<worker_t> worker_ptr;
-    std::vector<worker_ptr> m_pool;
+    typedef std::vector<worker_ptr> pool_t;
 
-    work_distributor_t m_distributor;
+    worker_ptr & get_worker();
+
+    pool_t m_pool;
+    pool_t::iterator m_next_worker;
 };
 
 
@@ -39,20 +41,37 @@ inline thread_pool_t::thread_pool_t(size_t threads_count)
 
     m_pool.resize(threads_count);
 
-    for (auto &worker : m_pool) {
-        worker.reset(new worker_t);
-        m_distributor.add_worker(worker.get());
+    for (int i = 0; i < (int)m_pool.size(); ++i) {
+        m_pool[i].reset(new worker_t(i));
     }
+
+    m_next_worker = m_pool.begin();
 }
 
 template <typename Handler>
 inline void thread_pool_t::post(Handler &&handler)
 {
-    worker_t *chosen = m_distributor.get_worker();
+    worker_ptr &chosen = get_worker();
     if (!chosen->post(std::forward<Handler>(handler)))
     {
         throw std::overflow_error("worker queue is full");
     }
+}
+
+inline thread_pool_t::worker_ptr & thread_pool_t::get_worker()
+{
+    int id = worker_t::get_id();
+
+    if (id != -1 && id < (int)m_pool.size()) {
+        return m_pool[id];
+    }
+
+    worker_ptr &ret = *m_next_worker;
+    ++m_next_worker;
+    if (m_next_worker == m_pool.end()) {
+        m_next_worker = m_pool.begin();
+    }
+    return ret;
 }
 
 #endif
