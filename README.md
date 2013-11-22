@@ -1,7 +1,12 @@
 thread-pool-cpp11
 =================
 
-C++11 compatible *fast :P* thread pool.
+1. *fast :P*.
+2. C++11 compatible.
+3. Header-only.
+
+You need C++11 to compile this code.
+Project file for Qt 5.1 provided.
 
 Post job to thread pool is 10 times faster than for boost::asio based thread pool.
 
@@ -21,7 +26,4 @@ Post job to thread pool is 10 times faster than for boost::asio based thread poo
     reposted 1000001 in 3500.07 ms
 
 See main.cpp for benchmark code.
-
-You need C++11 to compile this code.
-Project file for Qt 5 provided.
 
