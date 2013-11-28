@@ -166,9 +166,9 @@ void test_standalone_func()
 
 struct test_member_t
 {
-    int useless(int i, int j)
+    void useless(int i, int j)
     {
-        return i + j;
+        (void)(i + j);
     }
 
 } test_member;
@@ -185,12 +185,11 @@ int main(int, const char *[])
 
         thread_pool_t thread_pool(THREADS_COUNT);
 
-        thread_pool.post(std::bind(test_standalone_func));
+        thread_pool.post(test_standalone_func);
         thread_pool.post(std::bind(&test_member_t::useless, &test_member, 42, 42));
 
-//        std::cout << "Copy test [ENTER]" << std::endl;
-//        thread_pool.post(copy_task_t());
-//        std::cin.get();
+        std::cout << "Copy test [ENTER]" << std::endl;
+        thread_pool.post(copy_task_t());
 
         for (size_t i = 0; i < CONCURRENCY; ++i) {
             thread_pool.post(repost_job_t(&thread_pool));
@@ -205,9 +204,8 @@ int main(int, const char *[])
 
         asio_thread_pool_t asio_thread_pool(THREADS_COUNT);
 
-//        std::cout << "Copy test [ENTER]" << std::endl;
-//        asio_thread_pool.post(copy_task_t());
-//        std::cin.get();
+        std::cout << "Copy test [ENTER]" << std::endl;
+        asio_thread_pool.post(copy_task_t());
 
         for (size_t i = 0; i < CONCURRENCY; ++i) {
             asio_thread_pool.post(repost_job_t(&asio_thread_pool));

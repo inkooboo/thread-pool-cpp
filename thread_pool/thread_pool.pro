@@ -29,4 +29,5 @@ HEADERS += \
     callback.hpp \
     worker.hpp \
     progressive_waiter.hpp \
-    mpsc_bounded_queue.hpp
+    mpsc_bounded_queue.hpp \
+    fixed_function.hpp

@@ -1,7 +1,7 @@
 #ifndef WORKER_HPP
 #define WORKER_HPP
 
-#include <callback.hpp>
+#include <fixed_function.hpp>
 #include <mpsc_bounded_queue.hpp>
 #include <progressive_waiter.hpp>
 #include <atomic>
@@ -23,7 +23,7 @@ public:
 private:
     void thread_func(int id);
 
-    typedef callback_t<32> func_t;
+    typedef fixed_function_t<void()> func_t;
     mpsc_bounded_queue_t<func_t, QUEUE_SIZE> m_queue;
     bool m_stop_flag;
     std::thread m_thread;
