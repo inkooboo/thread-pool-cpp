@@ -21,7 +21,6 @@ public:
 
     T * front();
 
-    // Can be called ONLY if 'front()' method returned non-null object before
     void pop();
 
 private:

@@ -2,8 +2,6 @@
 
 #include <asio_thread_pool.hpp>
 
-#include <mpsc_bounded_queue.hpp>
-
 #include <iostream>
 #include <chrono>
 #include <thread>
@@ -66,12 +64,12 @@ struct heavy_t {
         return *this;
     }
 
-//    ~heavy_t()
-//    {
-//        if (verbose) {
-//            std::cout << "heavy destructor" << std::endl;
-//        }
-//    }
+    ~heavy_t()
+    {
+        if (verbose) {
+            std::cout << "heavy destructor" << std::endl;
+        }
+    }
 };
 
 
@@ -143,23 +141,6 @@ struct copy_task_t
     }
 };
 
-void test_queue()
-{
-    mpsc_bounded_queue_t<int, 2> queue;
-    assert(!queue.front());
-    assert(queue.push(1));
-    assert(queue.push(2));
-    assert(!queue.push(3));
-    assert(1 == *queue.front());
-    queue.pop();
-    assert(2 == *queue.front());
-    queue.pop();
-    assert(!queue.front());
-    assert(queue.push(3));
-    assert(3 == *queue.front());
-    queue.pop();
-}
-
 void test_standalone_func()
 {
 }
@@ -176,8 +157,6 @@ struct test_member_t
 int main(int, const char *[])
 {
     using namespace std::placeholders;
-
-    test_queue();
 
     std::cout << "*******begin tests*******" << std::endl;
     {
