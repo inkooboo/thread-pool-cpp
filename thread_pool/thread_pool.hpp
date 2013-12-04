@@ -6,7 +6,6 @@
 #include <atomic>
 #include <memory>
 #include <stdexcept>
-#include <vector>
 
 class thread_pool_t : private noncopyable_t {
 public:
@@ -14,17 +13,14 @@ public:
 
     explicit thread_pool_t(size_t threads_count = AUTODETECT);
 
-    ~thread_pool_t();
-
     template <typename Handler>
     void post(Handler &&handler);
 
 private:
-    typedef std::vector<worker_t *> pool_t;
+    worker_t & get_worker();
 
-    worker_t * get_worker();
-
-    pool_t m_pool;
+    std::unique_ptr<worker_t[]> m_workers;
+    size_t m_workers_count;
     std::atomic<size_t> m_next_worker;
 };
 
@@ -42,38 +38,33 @@ inline thread_pool_t::thread_pool_t(size_t threads_count)
         threads_count = 1;
     }
 
-    m_pool.resize(threads_count);
+    m_workers_count = threads_count;
 
-    for (size_t i = 0; i < m_pool.size(); ++i) {
-        m_pool[i] = new worker_t(i);
-    }
-}
+    m_workers.reset(new worker_t[m_workers_count]);
 
-inline thread_pool_t::~thread_pool_t()
-{
-    for (auto &worker : m_pool) {
-        delete worker;
+    for (size_t i = 0; i < m_workers_count; ++i) {
+        m_workers[i].start(i);
     }
 }
 
 template <typename Handler>
 inline void thread_pool_t::post(Handler &&handler)
 {
-    if (!get_worker()->post(std::forward<Handler>(handler)))
+    if (!get_worker().post(std::forward<Handler>(handler)))
     {
         throw std::overflow_error("worker queue is full");
     }
 }
 
-inline worker_t *thread_pool_t::get_worker()
+inline worker_t & thread_pool_t::get_worker()
 {
-    int id = worker_t::get_id();
+    size_t id = worker_t::get_worker_id_for_this_thread();
 
-    if (id > m_pool.size()) {
-        id = m_next_worker.fetch_add(1, std::memory_order_relaxed) % m_pool.size();
+    if (id > m_workers_count) {
+        id = m_next_worker.fetch_add(1, std::memory_order_relaxed) % m_workers_count;
     }
 
-    return m_pool[id];
+    return m_workers[id];
 }
 
 #endif
