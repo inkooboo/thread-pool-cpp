@@ -3,6 +3,7 @@
 
 #include <noncopyable.hpp>
 #include <worker.hpp>
+#include <atomic>
 #include <memory>
 #include <stdexcept>
 #include <vector>
@@ -13,23 +14,25 @@ public:
 
     explicit thread_pool_t(size_t threads_count = AUTODETECT);
 
+    ~thread_pool_t();
+
     template <typename Handler>
     void post(Handler &&handler);
 
 private:
-    typedef std::unique_ptr<worker_t> worker_ptr;
-    typedef std::vector<worker_ptr> pool_t;
+    typedef std::vector<worker_t *> pool_t;
 
-    worker_ptr & get_worker();
+    worker_t * get_worker();
 
     pool_t m_pool;
-    pool_t::iterator m_next_worker;
+    std::atomic<size_t> m_next_worker;
 };
 
 
 /// Implementation
 
 inline thread_pool_t::thread_pool_t(size_t threads_count)
+    : m_next_worker(0)
 {
     if (AUTODETECT == threads_count) {
         threads_count = std::thread::hardware_concurrency();
@@ -41,37 +44,36 @@ inline thread_pool_t::thread_pool_t(size_t threads_count)
 
     m_pool.resize(threads_count);
 
-    for (int i = 0; i < (int)m_pool.size(); ++i) {
-        m_pool[i].reset(new worker_t(i));
+    for (size_t i = 0; i < m_pool.size(); ++i) {
+        m_pool[i] = new worker_t(i);
     }
+}
 
-    m_next_worker = m_pool.begin();
+inline thread_pool_t::~thread_pool_t()
+{
+    for (auto &worker : m_pool) {
+        delete worker;
+    }
 }
 
 template <typename Handler>
 inline void thread_pool_t::post(Handler &&handler)
 {
-    worker_ptr &chosen = get_worker();
-    if (!chosen->post(std::forward<Handler>(handler)))
+    if (!get_worker()->post(std::forward<Handler>(handler)))
     {
         throw std::overflow_error("worker queue is full");
     }
 }
 
-inline thread_pool_t::worker_ptr & thread_pool_t::get_worker()
+inline worker_t *thread_pool_t::get_worker()
 {
     int id = worker_t::get_id();
 
-    if (id != -1 && id < (int)m_pool.size()) {
-        return m_pool[id];
+    if (id > m_pool.size()) {
+        id = m_next_worker.fetch_add(1, std::memory_order_relaxed) % m_pool.size();
     }
 
-    worker_ptr &ret = *m_next_worker;
-    ++m_next_worker;
-    if (m_next_worker == m_pool.end()) {
-        m_next_worker = m_pool.begin();
-    }
-    return ret;
+    return m_pool[id];
 }
 
 #endif

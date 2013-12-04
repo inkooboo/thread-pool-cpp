@@ -11,17 +11,17 @@ class worker_t : private noncopyable_t
 {
     enum {QUEUE_SIZE = 1024};
 public:
-    worker_t(int id);
+    worker_t(size_t id);
 
     ~worker_t();
 
-    static int get_id();
+    static size_t get_id();
 
     template <typename Handler>
     bool post(Handler &&handler);
 
 private:
-    void thread_func(int id);
+    void thread_func(size_t id);
 
     typedef fixed_function_t<void()> func_t;
     mpsc_bounded_queue_t<func_t, QUEUE_SIZE> m_queue;
@@ -34,7 +34,7 @@ private:
 
 /// Implementation
 
-inline worker_t::worker_t(int id)
+inline worker_t::worker_t(size_t id)
     : m_stop_flag(false)
     , m_starting(true)
 {
@@ -52,13 +52,13 @@ inline worker_t::~worker_t()
 }
 
 
-inline static int * thread_id()
+inline static size_t * thread_id()
 {
-    static thread_local int tss_id = -1;
+    static thread_local size_t tss_id = -1;
     return &tss_id;
 }
 
-inline int worker_t::get_id()
+inline size_t worker_t::get_id()
 {
     return *thread_id();
 }
@@ -69,7 +69,7 @@ inline bool worker_t::post(Handler &&handler)
     return m_queue.push(std::forward<Handler>(handler));
 }
 
-inline void worker_t::thread_func(int id)
+inline void worker_t::thread_func(size_t id)
 {
     progressive_waiter_t waiter;
 
