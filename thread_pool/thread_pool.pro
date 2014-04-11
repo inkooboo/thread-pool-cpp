@@ -28,6 +28,5 @@ HEADERS += \
     asio_thread_pool.hpp \
     callback.hpp \
     worker.hpp \
-    progressive_waiter.hpp \
     mpsc_bounded_queue.hpp \
     fixed_function.hpp

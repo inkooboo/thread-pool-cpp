@@ -61,16 +61,14 @@ public:
 
     ~fixed_function_t()
     {
-        if (m_delete_ptr) {
+        if (m_delete_ptr)
             (*m_delete_ptr)(m_object_ptr);
-        }
     }
 
     R operator()(ARGS... args) const
     {
-        if (!m_method_ptr) {
+        if (!m_method_ptr)
             throw std::runtime_error("call of empty functor");
-        }
         return (*m_method_ptr)(m_object_ptr, args...);
     }
 
@@ -87,6 +85,8 @@ private:
 
     void move_from_other(fixed_function_t &o)
     {
+        this->~fixed_function_t();
+
         m_method_ptr = o.m_method_ptr;
         m_delete_ptr = o.m_delete_ptr;
 

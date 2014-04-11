@@ -4,7 +4,7 @@
 #include <noncopyable.hpp>
 #include <worker.hpp>
 #include <atomic>
-#include <memory>
+#include <vector>
 #include <stdexcept>
 
 class thread_pool_t : private noncopyable_t {
@@ -19,8 +19,7 @@ public:
 private:
     worker_t & get_worker();
 
-    std::unique_ptr<worker_t[]> m_workers;
-    size_t m_workers_count;
+    std::vector<worker_t> m_workers;
     std::atomic<size_t> m_next_worker;
 };
 
@@ -38,12 +37,10 @@ inline thread_pool_t::thread_pool_t(size_t threads_count)
         threads_count = 1;
     }
 
-    m_workers_count = threads_count;
+    m_workers.reserve(threads_count);
 
-    m_workers.reset(new worker_t[m_workers_count]);
-
-    for (size_t i = 0; i < m_workers_count; ++i) {
-        m_workers[i].start(i);
+    for (size_t i = 0; i < threads_count; ++i) {
+        m_workers.emplace_back(TODO);
     }
 }
 
@@ -61,7 +58,7 @@ inline worker_t & thread_pool_t::get_worker()
     size_t id = worker_t::get_worker_id_for_this_thread();
 
     if (id > m_workers_count) {
-        id = m_next_worker.fetch_add(1, std::memory_order_relaxed) % m_workers_count;
+        id = m_next_worker.fetch_add(1, std::memory_order_relaxed) % m_workers.size();
     }
 
     return m_workers[id];

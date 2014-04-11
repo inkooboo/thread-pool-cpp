@@ -1,6 +1,10 @@
+#define WITHOUT_ASIO 1
+
 #include <thread_pool.hpp>
 
+#ifndef WITHOUT_ASIO
 #include <asio_thread_pool.hpp>
+#endif
 
 #include <iostream>
 #include <chrono>
@@ -67,7 +71,7 @@ struct heavy_t {
     ~heavy_t()
     {
         if (verbose) {
-            std::cout << "heavy destructor" << std::endl;
+            std::cout << "heavy destructor. " << (resource.size() ? "Own resource" : "Don't own resource") << std::endl;
         }
     }
 };
@@ -77,14 +81,18 @@ struct repost_job_t {
     //heavy_t heavy;
 
     thread_pool_t *thread_pool;
+#ifndef WITHOUT_ASIO
     asio_thread_pool_t *asio_thread_pool;
+#endif
 
     size_t counter;
     long long int begin_count;
 
     repost_job_t()
         : thread_pool(0)
+#ifndef WITHOUT_ASIO
         , asio_thread_pool(0)
+#endif
         , counter(0)
     {
         begin_count = std::chrono::high_resolution_clock::now().time_since_epoch().count();
@@ -93,12 +101,15 @@ struct repost_job_t {
 
     explicit repost_job_t(thread_pool_t *thread_pool)
         : thread_pool(thread_pool)
-        , asio_thread_pool(0)
+#ifndef WITHOUT_ASIO
+            , asio_thread_pool(0)
+#endif
         , counter(0)
     {
         begin_count = std::chrono::high_resolution_clock::now().time_since_epoch().count();
     }
 
+#ifndef WITHOUT_ASIO
     explicit repost_job_t(asio_thread_pool_t *asio_thread_pool)
         : thread_pool(0)
         , asio_thread_pool(asio_thread_pool)
@@ -106,15 +117,17 @@ struct repost_job_t {
     {
         begin_count = std::chrono::high_resolution_clock::now().time_since_epoch().count();
     }
+#endif
 
     void operator()()
     {
         if (counter++ < REPOST_COUNT) {
+#ifndef WITHOUT_ASIO
             if (asio_thread_pool) {
                 asio_thread_pool->post(*this);
                 return;
             }
-
+#endif
             if (thread_pool) {
                 thread_pool->post(*this);
                 return;
@@ -162,22 +175,30 @@ int main(int, const char *[])
     {
         std::cout << "***thread_pool_t***" << std::endl;
 
-        thread_pool_t thread_pool(THREADS_COUNT);
-
-        thread_pool.post(test_standalone_func);
-        thread_pool.post(std::bind(&test_member_t::useless, &test_member, 42, 42));
-
-        std::cout << "Copy test [ENTER]" << std::endl;
-        thread_pool.post(copy_task_t());
-
-        for (size_t i = 0; i < CONCURRENCY; ++i) {
-            thread_pool.post(repost_job_t(&thread_pool));
+        {
+            thread_pool_t thread_pool(THREADS_COUNT);
+            thread_pool.post(test_standalone_func);
+            thread_pool.post(std::bind(&test_member_t::useless, &test_member, 42, 42));
         }
 
-        std::cout << "Repost test [ENTER]" << std::endl;
-        std::cin.get();
+        {
+            std::cout << "Copy test [ENTER]" << std::endl;
+            thread_pool_t thread_pool(THREADS_COUNT);
+            thread_pool.post(copy_task_t());
+        }
+
+        {
+            thread_pool_t thread_pool(THREADS_COUNT);
+            for (size_t i = 0; i < CONCURRENCY; ++i) {
+                thread_pool.post(repost_job_t(&thread_pool));
+            }
+
+            std::cout << "Repost test [ENTER]" << std::endl;
+            std::cin.get();
+        }
     }
 
+#ifndef WITHOUT_ASIO
     {
         std::cout << "***asio_thread_pool_t***" << std::endl;
 
@@ -193,6 +214,7 @@ int main(int, const char *[])
         std::cout << "Repost test [ENTER]" << std::endl;
         std::cin.get();
     }
+#endif
 
     return 0;
 }
