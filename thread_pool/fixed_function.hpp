@@ -8,13 +8,11 @@
 #include <utility>
 #include <functional>
 
-template <typename SIGNATURE>
+template <typename SIGNATURE, int STORAGE_SIZE = 32>
 class fixed_function_t;
 
-template <typename R, typename... ARGS>
-class fixed_function_t<R(ARGS...)> : private noncopyable_t {
-    enum {STORAGE_SIZE = 32};
-    enum {STORAGE_ALIGNMENT = sizeof(int)};
+template <typename R, typename... ARGS, int STORAGE_SIZE>
+class fixed_function_t<R(ARGS...), STORAGE_SIZE> : private noncopyable_t {
 public:
     fixed_function_t()
         : m_object_ptr(&m_storage)
@@ -73,7 +71,7 @@ public:
     }
 
 private:
-    typename std::aligned_storage<STORAGE_SIZE, STORAGE_ALIGNMENT>::type m_storage;
+    typename std::aligned_storage<STORAGE_SIZE, sizeof(size_t)>::type m_storage;
 
     void *m_object_ptr;
 

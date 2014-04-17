@@ -1,4 +1,4 @@
-#define WITHOUT_ASIO 1
+//#define WITHOUT_ASIO 1
 
 #include <thread_pool.hpp>
 

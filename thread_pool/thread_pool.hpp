@@ -6,6 +6,7 @@
 #include <atomic>
 #include <vector>
 #include <stdexcept>
+#include <memory>
 
 class thread_pool_t : private noncopyable_t {
 public:
@@ -19,7 +20,8 @@ public:
 private:
     worker_t & get_worker();
 
-    std::vector<worker_t> m_workers;
+    typedef std::unique_ptr<worker_t> worker_ptr;
+    std::vector<worker_ptr> m_workers;
     std::atomic<size_t> m_next_worker;
 };
 
@@ -37,10 +39,17 @@ inline thread_pool_t::thread_pool_t(size_t threads_count)
         threads_count = 1;
     }
 
-    m_workers.reserve(threads_count);
+    m_workers.resize(threads_count);
 
     for (size_t i = 0; i < threads_count; ++i) {
-        m_workers.emplace_back(TODO);
+        worker_ptr *donor = &m_workers[(i + 1) % threads_count];
+        m_workers[i].reset(new worker_t([donor](worker_t::task_t &task) {
+            return (*donor)->steal(task);
+        }));
+    }
+
+    for (size_t i = 0; i < threads_count; ++i) {
+        m_workers[i]->start(i);
     }
 }
 
@@ -57,11 +66,11 @@ inline worker_t & thread_pool_t::get_worker()
 {
     size_t id = worker_t::get_worker_id_for_this_thread();
 
-    if (id > m_workers_count) {
+    if (id > m_workers.size()) {
         id = m_next_worker.fetch_add(1, std::memory_order_relaxed) % m_workers.size();
     }
 
-    return m_workers[id];
+    return *m_workers[id];
 }
 
 #endif
