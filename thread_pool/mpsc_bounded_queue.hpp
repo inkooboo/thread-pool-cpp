@@ -8,17 +8,39 @@
 #include <cstddef>
 
 /// Inspired by
-/// http://www.1024cores.net/home/lock-free-algorithms/queues/bounded-mpmc-queue
+///
 
+/**
+ * @brief The mpmc_bounded_queue_t class implements bounded multi-producers/multi-consumers lock-free queue.
+ * Doesn't accept non-movabe types as T.
+ * Inspired by Dmitry Vyukov's mpmc queue.
+ * http://www.1024cores.net/home/lock-free-algorithms/queues/bounded-mpmc-queue
+ */
 template <typename T, unsigned BUFFER_SIZE>
-class mpsc_bounded_queue_t : private noncopyable_t {
+class mpmc_bounded_queue_t : noncopyable_t {
     enum {BUFFER_MASK = BUFFER_SIZE - 1};
-public:
-    mpsc_bounded_queue_t();
 
+    static_assert(std::is_move_constructible<T>::value, "Type have to be move-constructable.");
+
+public:
+    /**
+     * @brief mpmc_bounded_queue_t Constructor.
+     */
+    mpmc_bounded_queue_t();
+
+    /**
+     * @brief push Push data to queue.
+     * @param data Data to be pushed.
+     * @return true on success.
+     */
     template <typename U>
     bool push(U &&data);
 
+    /**
+     * @brief pop Pop data from queue.
+     * @param data Place to store popped data.
+     * @return true on sucess.
+     */
     bool pop(T &data);
 
 private:
@@ -42,7 +64,7 @@ private:
 /// Implementation
 
 template <typename T, unsigned BUFFER_SIZE>
-inline mpsc_bounded_queue_t<T, BUFFER_SIZE>::mpsc_bounded_queue_t()
+inline mpmc_bounded_queue_t<T, BUFFER_SIZE>::mpmc_bounded_queue_t()
     : m_enqueue_pos(0)
     , m_dequeue_pos(0)
 {
@@ -58,7 +80,7 @@ inline mpsc_bounded_queue_t<T, BUFFER_SIZE>::mpsc_bounded_queue_t()
 
 template <typename T, unsigned BUFFER_SIZE>
 template <typename U>
-inline bool mpsc_bounded_queue_t<T, BUFFER_SIZE>::push(U &&data)
+inline bool mpmc_bounded_queue_t<T, BUFFER_SIZE>::push(U &&data)
 {
     cell_t *cell;
     size_t pos = m_enqueue_pos.load(std::memory_order_relaxed);
@@ -70,11 +92,9 @@ inline bool mpsc_bounded_queue_t<T, BUFFER_SIZE>::push(U &&data)
             if (m_enqueue_pos.compare_exchange_weak(pos, pos + 1, std::memory_order_relaxed)) {
                 break;
             }
-        }
-        else if (dif < 0) {
+        } else if (dif < 0) {
             return false;
-        }
-        else {
+        } else {
             pos = m_enqueue_pos.load(std::memory_order_relaxed);
         }
     }
@@ -87,21 +107,23 @@ inline bool mpsc_bounded_queue_t<T, BUFFER_SIZE>::push(U &&data)
 }
 
 template <typename T, unsigned BUFFER_SIZE>
-inline bool mpsc_bounded_queue_t<T, BUFFER_SIZE>::pop(T &data)
+inline bool mpmc_bounded_queue_t<T, BUFFER_SIZE>::pop(T &data)
 {
     cell_t *cell;
     size_t pos = m_dequeue_pos.load(std::memory_order_relaxed);
     for (;;) {
-    cell = &m_buffer[pos & BUFFER_MASK];
-    size_t seq = cell->sequence.load(std::memory_order_acquire);
-    intptr_t dif = (intptr_t)seq - (intptr_t)(pos + 1);
-    if (dif == 0) {
-        if (m_dequeue_pos.compare_exchange_weak(pos, pos + 1, std::memory_order_relaxed))
-            break;
-    } else if (dif < 0)
-        return false;
-    else
-        pos = m_dequeue_pos.load(std::memory_order_relaxed);
+        cell = &m_buffer[pos & BUFFER_MASK];
+        size_t seq = cell->sequence.load(std::memory_order_acquire);
+        intptr_t dif = (intptr_t)seq - (intptr_t)(pos + 1);
+        if (dif == 0) {
+            if (m_dequeue_pos.compare_exchange_weak(pos, pos + 1, std::memory_order_relaxed)) {
+                break;
+            }
+        } else if (dif < 0) {
+            return false;
+        } else {
+            pos = m_dequeue_pos.load(std::memory_order_relaxed);
+        }
     }
 
     data = std::move(cell->data);

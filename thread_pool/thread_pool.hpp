@@ -7,17 +7,34 @@
 #include <stdexcept>
 #include <memory>
 
-class thread_pool_t : private noncopyable_t {
+/**
+ * @brief The thread_pool_t class implemets tread pool pattern.
+ * It is highly scalable, fast and implements work-stealing pattern
+ * between workers.
+ */
+class thread_pool_t : noncopyable_t {
 public:
     enum {AUTODETECT = 0};
 
+    /**
+     * @brief thread_pool_t Construct and start new thread pool.
+     * @param threads_count Number of threads to create.
+     */
     explicit thread_pool_t(size_t threads_count = AUTODETECT);
 
+    /**
+     * @brief post Post some task to thread pool.
+     * @param handler Handler to be called from thread pool worker. It has to be callable as 'handler()'.
+     */
     template <typename Handler>
     void post(Handler &&handler);
 
 private:
-    worker_t &get_worker();
+    /**
+     * @brief get_worker Helper function to select next executing worker.
+     * @return Reference to worker.
+     */
+    worker_t & get_worker();
 
     std::unique_ptr<worker_t[]> m_workers;
     size_t m_workers_count;

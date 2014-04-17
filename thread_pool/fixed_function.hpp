@@ -8,12 +8,22 @@
 #include <utility>
 #include <functional>
 
-template <typename SIGNATURE, int STORAGE_SIZE = 32>
+/**
+ * @brief The fixed_function_t<R(ARGS...), STORAGE_SIZE> class Implements functional object.
+ * This function is analog of std::function with limited capabilities:
+ *  - It supports only movable types.
+ *  - The size of functional objects is limited to storage size.
+ * Due to limitations above it is much faster on creation and copying than std::function.
+ */
+template <typename SIGNATURE, size_t STORAGE_SIZE>
 class fixed_function_t;
 
-template <typename R, typename... ARGS, int STORAGE_SIZE>
-class fixed_function_t<R(ARGS...), STORAGE_SIZE> : private noncopyable_t {
+template <typename R, typename... ARGS, size_t STORAGE_SIZE>
+class fixed_function_t<R(ARGS...), STORAGE_SIZE> : noncopyable_t {
 public:
+    /**
+     * @brief fixed_function_t Empty constructor.
+     */
     fixed_function_t()
         : m_object_ptr(&m_storage)
         , m_method_ptr(nullptr)
@@ -22,6 +32,9 @@ public:
     }
 
     template <typename FUNC>
+    /**
+     * @brief fixed_function_t Constructor from functional object.
+     */
     fixed_function_t(FUNC &&object)
     {
         typedef typename std::remove_reference<FUNC>::type unref_type;
@@ -41,28 +54,45 @@ public:
     }
 
     template <typename RET, typename... PARAMS>
+    /**
+     * @brief fixed_function_t Constructor from free function or static functions.
+     */
     fixed_function_t(RET(*func_ptr)(PARAMS...))
         : fixed_function_t(std::bind(func_ptr))
     {
     }
 
+    /**
+     * @brief fixed_function_t Move constructor.
+     */
     fixed_function_t(fixed_function_t &&o)
     {
         move_from_other(o);
     }
 
+    /**
+     * @brief operator = Move assignment operator.
+     * @param o Other fixed function object.
+     * @return Reference to *this.
+     */
     fixed_function_t & operator=(fixed_function_t &&o)
     {
         move_from_other(o);
         return *this;
     }
 
+    /**
+     * @brief ~fixed_function_t Destructor.
+     */
     ~fixed_function_t()
     {
         if (m_delete_ptr)
             (*m_delete_ptr)(m_object_ptr);
     }
 
+    /**
+     * @brief operator () Execute stored funtional object.
+     */
     R operator()(ARGS... args) const
     {
         if (!m_method_ptr)
@@ -81,6 +111,10 @@ private:
     typedef void (*delete_type)(void *);
     delete_type m_delete_ptr;
 
+    /**
+     * @brief move_from_other Helper function to implement move-semantics.
+     * @param o Other fixed funtion object.
+     */
     void move_from_other(fixed_function_t &o)
     {
         this->~fixed_function_t();

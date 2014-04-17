@@ -1,14 +1,12 @@
 thread-pool-cpp11
 =================
 
-1. *fast :P*.
-2. C++11 compatible.
+1. Fast.
+2. Scalable.
 3. Header-only.
 4. Work stealing pattern.
 
-You need C++11 to compile this code.
-Project file for Qt 5.1 provided.
-
+Example run:
 Post job to thread pool is up to 10 times faster than for boost::asio based thread pool.
 
     *******begin tests*******
