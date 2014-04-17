@@ -8,9 +8,9 @@
 
 /**
  * @brief The worker_t class owns task queue and executing thread.
- * In executing thread it tries to pop task from queue, if empty then
- * tries to steal task from sibling worker, if unsuccessful then spin
- * with one millisecond delay.
+ * In executing thread it tries to pop task from queue. If queue is empty
+ * then it tries to steal task from the sibling worker. If stealing was unsuccessful
+ * then spins with one millisecond delay.
  */
 class worker_t : noncopyable_t
 {
@@ -25,7 +25,7 @@ public:
 
     /**
      * @brief ~worker_t Destructor.
-     * Waits until the executing thread ended.
+     * Waits until the executing thread became finished.
      */
     ~worker_t();
 

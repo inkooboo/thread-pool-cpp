@@ -9,8 +9,8 @@
 #include <functional>
 
 /**
- * @brief The fixed_function_t<R(ARGS...), STORAGE_SIZE> class Implements functional object.
- * This function is analog of std::function with limited capabilities:
+ * @brief The fixed_function_t<R(ARGS...), STORAGE_SIZE> class implements functional object.
+ * This function is analog of 'std::function' with limited capabilities:
  *  - It supports only movable types.
  *  - The size of functional objects is limited to storage size.
  * Due to limitations above it is much faster on creation and copying than std::function.
@@ -55,7 +55,7 @@ public:
 
     template <typename RET, typename... PARAMS>
     /**
-     * @brief fixed_function_t Constructor from free function or static functions.
+     * @brief fixed_function_t Constructor from free function or static function.
      */
     fixed_function_t(RET(*func_ptr)(PARAMS...))
         : fixed_function_t(std::bind(func_ptr))
@@ -72,8 +72,6 @@ public:
 
     /**
      * @brief operator = Move assignment operator.
-     * @param o Other fixed function object.
-     * @return Reference to *this.
      */
     fixed_function_t & operator=(fixed_function_t &&o)
     {
@@ -91,7 +89,7 @@ public:
     }
 
     /**
-     * @brief operator () Execute stored funtional object.
+     * @brief operator () Execute stored functional object.
      */
     R operator()(ARGS... args) const
     {

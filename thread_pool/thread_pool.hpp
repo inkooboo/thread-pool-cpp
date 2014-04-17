@@ -8,9 +8,10 @@
 #include <memory>
 
 /**
- * @brief The thread_pool_t class implemets tread pool pattern.
- * It is highly scalable, fast and implements work-stealing pattern
- * between workers.
+ * @brief The thread_pool_t class implements thread pool pattern.
+ * It is highly scalable and fast.
+ * It is header only.
+ * It implements both work-stealing and work-distribution balancing startegies.
  */
 class thread_pool_t : noncopyable_t {
 public:
@@ -23,8 +24,9 @@ public:
     explicit thread_pool_t(size_t threads_count = AUTODETECT);
 
     /**
-     * @brief post Post some task to thread pool.
+     * @brief post Post piece of job to thread pool.
      * @param handler Handler to be called from thread pool worker. It has to be callable as 'handler()'.
+     * @throws std::overflow_error if worker's queue is full.
      */
     template <typename Handler>
     void post(Handler &&handler);
