@@ -4,7 +4,6 @@
 #include <noncopyable.hpp>
 #include <worker.hpp>
 #include <atomic>
-#include <vector>
 #include <stdexcept>
 #include <memory>
 
@@ -18,10 +17,10 @@ public:
     void post(Handler &&handler);
 
 private:
-    worker_t & get_worker();
+    worker_t &get_worker();
 
-    typedef std::unique_ptr<worker_t> worker_ptr;
-    std::vector<worker_ptr> m_workers;
+    std::unique_ptr<worker_t[]> m_workers;
+    size_t m_workers_count;
     std::atomic<size_t> m_next_worker;
 };
 
@@ -39,17 +38,13 @@ inline thread_pool_t::thread_pool_t(size_t threads_count)
         threads_count = 1;
     }
 
-    m_workers.resize(threads_count);
+    m_workers_count = threads_count;
 
-    for (size_t i = 0; i < threads_count; ++i) {
-        worker_ptr *donor = &m_workers[(i + 1) % threads_count];
-        m_workers[i].reset(new worker_t([donor](worker_t::task_t &task) {
-            return (*donor)->steal(task);
-        }));
-    }
+    m_workers.reset(new worker_t[m_workers_count]);
 
-    for (size_t i = 0; i < threads_count; ++i) {
-        m_workers[i]->start(i);
+    for (size_t i = 0; i < m_workers_count; ++i) {
+        worker_t *steal_donor = &m_workers[(i + 1) % threads_count];
+        m_workers[i].start(i, steal_donor);
     }
 }
 
@@ -66,11 +61,11 @@ inline worker_t & thread_pool_t::get_worker()
 {
     size_t id = worker_t::get_worker_id_for_this_thread();
 
-    if (id > m_workers.size()) {
-        id = m_next_worker.fetch_add(1, std::memory_order_relaxed) % m_workers.size();
+    if (id > m_workers_count) {
+        id = m_next_worker.fetch_add(1, std::memory_order_relaxed) % m_workers_count;
     }
 
-    return *m_workers[id];
+    return m_workers[id];
 }
 
 #endif
