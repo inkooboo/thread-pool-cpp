@@ -7,34 +7,34 @@
 #include <thread>
 
 /**
- * @brief The worker_t class owns task queue and executing thread.
+ * @brief The Worker class owns task queue and executing thread.
  * In executing thread it tries to pop task from queue. If queue is empty
  * then it tries to steal task from the sibling worker. If stealing was unsuccessful
  * then spins with one millisecond delay.
  */
-class worker_t : noncopyable_t
+class Worker : NonCopyable
 {
 public:
-    typedef fixed_function_t<void(), 32> task_t;
-    enum {QUEUE_SIZE = 1024};
+    typedef FixedFunction<void(), 64> Task;
 
     /**
-     * @brief worker_t Constructor.
+     * @brief Worker Constructor.
+     * @param queue_size Length of undelaying task queue.
      */
-    worker_t();
+    Worker(size_t queue_size);
 
     /**
-     * @brief ~worker_t Destructor.
+     * @brief ~Worker Destructor.
      * Waits until the executing thread became finished.
      */
-    ~worker_t();
+    ~Worker();
 
     /**
      * @brief start Create the executing thread and start tasks execution.
      * @param id Worker ID.
      * @param steal_donor Sibling worker to steal task from it.
      */
-    void start(size_t id, worker_t *steal_donor);
+    void start(size_t id, Worker *steal_donor);
 
     /**
      * @brief post Post task to queue.
@@ -49,13 +49,13 @@ public:
      * @param task Place for stealed task to be stored.
      * @return true on success.
      */
-    bool steal(task_t &task);
+    bool steal(Task &task);
 
     /**
      * @brief get_worker_id_for_this_thread Return worker ID associated with current thread if exists.
      * @return Worker ID.
      */
-    static size_t get_worker_id_for_this_thread();
+    static size_t getWorkerIdForCurrentThread();
 
 private:
     /**
@@ -63,34 +63,35 @@ private:
      * @param id Worker ID to be associated with this thread.
      * @param steal_donor Sibling worker to steal task from it.
      */
-    void thread_func(size_t id, worker_t *steal_donor);
+    void threadFunc(size_t id, Worker *steal_donor);
 
-    mpmc_bounded_queue_t<task_t, QUEUE_SIZE> m_queue;
+    MPMCBoundedQueue<Task> m_queue;
     bool m_stop_flag;
     std::thread m_thread;
     std::atomic<bool> m_starting;
-    worker_t *m_steal_donor;
+    Worker *m_steal_donor;
 };
 
 
 /// Implementation
 
-inline worker_t::worker_t()
-    : m_stop_flag(false)
+inline Worker::Worker(size_t queue_size)
+    : m_queue(queue_size)
+    , m_stop_flag(false)
 {
 }
 
-inline worker_t::~worker_t()
+inline Worker::~Worker()
 {
     post([&](){m_stop_flag = true;});
     m_thread.join();
 }
 
-inline void worker_t::start(size_t id, worker_t *steal_donor)
+inline void Worker::start(size_t id, Worker *steal_donor)
 {
     m_steal_donor = steal_donor;
     m_starting = true;
-    m_thread = std::thread(&worker_t::thread_func, this, id, steal_donor);
+    m_thread = std::thread(&Worker::threadFunc, this, id, steal_donor);
     post([&](){m_starting = false;});
     while (m_starting) {
         std::this_thread::yield();
@@ -103,27 +104,27 @@ inline static size_t * thread_id()
     return &tss_id;
 }
 
-inline size_t worker_t::get_worker_id_for_this_thread()
+inline size_t Worker::getWorkerIdForCurrentThread()
 {
     return *thread_id();
 }
 
 template <typename Handler>
-inline bool worker_t::post(Handler &&handler)
+inline bool Worker::post(Handler &&handler)
 {
     return m_queue.push(std::forward<Handler>(handler));
 }
 
-inline bool worker_t::steal(task_t &task)
+inline bool Worker::steal(Task &task)
 {
     return m_queue.pop(task);
 }
 
-inline void worker_t::thread_func(size_t id, worker_t *steal_donor)
+inline void Worker::threadFunc(size_t id, Worker *steal_donor)
 {
     *thread_id() = id;
 
-    task_t handler;
+    Task handler;
 
     while (!m_stop_flag)
         if (m_queue.pop(handler) || steal_donor->steal(handler)) {

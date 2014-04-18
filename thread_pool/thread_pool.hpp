@@ -6,22 +6,31 @@
 #include <atomic>
 #include <stdexcept>
 #include <memory>
+#include <vector>
 
 /**
- * @brief The thread_pool_t class implements thread pool pattern.
+ * @brief The ThreadPoolOptions struct provides construction options for ThreadPool.
+ */
+struct ThreadPoolOptions {
+    enum {AUTODETECT = 0};
+    size_t threads_count = AUTODETECT;
+    size_t worker_queue_size = 1024;
+};
+
+/**
+ * @brief The ThreadPool class implements thread pool pattern.
  * It is highly scalable and fast.
  * It is header only.
  * It implements both work-stealing and work-distribution balancing startegies.
+ * It implements cooperative scheduling strategy for tasks.
  */
-class thread_pool_t : noncopyable_t {
+class ThreadPool : NonCopyable {
 public:
-    enum {AUTODETECT = 0};
-
     /**
      * @brief thread_pool_t Construct and start new thread pool.
-     * @param threads_count Number of threads to create.
+     * @param options Creation options.
      */
-    explicit thread_pool_t(size_t threads_count = AUTODETECT);
+    explicit ThreadPool(const ThreadPoolOptions &options = ThreadPoolOptions());
 
     /**
      * @brief post Post piece of job to thread pool.
@@ -36,55 +45,57 @@ private:
      * @brief get_worker Helper function to select next executing worker.
      * @return Reference to worker.
      */
-    worker_t & get_worker();
+    Worker & getWorker();
 
-    std::unique_ptr<worker_t[]> m_workers;
-    size_t m_workers_count;
+    std::vector<std::unique_ptr<Worker>> m_workers;
     std::atomic<size_t> m_next_worker;
 };
 
 
 /// Implementation
 
-inline thread_pool_t::thread_pool_t(size_t threads_count)
+inline ThreadPool::ThreadPool(const ThreadPoolOptions &options)
     : m_next_worker(0)
 {
-    if (AUTODETECT == threads_count) {
-        threads_count = std::thread::hardware_concurrency();
+    size_t workers_count = options.threads_count;
+
+    if (ThreadPoolOptions::AUTODETECT == options.threads_count) {
+        workers_count = std::thread::hardware_concurrency();
     }
 
-    if (0 == threads_count) {
-        threads_count = 1;
+    if (0 == workers_count) {
+        workers_count = 1;
     }
 
-    m_workers_count = threads_count;
+    m_workers.resize(workers_count);
+    for (auto &worker_ptr : m_workers) {
+        worker_ptr.reset(new Worker(options.worker_queue_size));
+    }
 
-    m_workers.reset(new worker_t[m_workers_count]);
-
-    for (size_t i = 0; i < m_workers_count; ++i) {
-        worker_t *steal_donor = &m_workers[(i + 1) % threads_count];
-        m_workers[i].start(i, steal_donor);
+    for (size_t i = 0; i < m_workers.size(); ++i) {
+        Worker *steal_donor = m_workers[(i + 1) % m_workers.size()].get();
+        m_workers[i]->start(i, steal_donor);
     }
 }
 
 template <typename Handler>
-inline void thread_pool_t::post(Handler &&handler)
+inline void ThreadPool::post(Handler &&handler)
 {
-    if (!get_worker().post(std::forward<Handler>(handler)))
+    if (!getWorker().post(std::forward<Handler>(handler)))
     {
         throw std::overflow_error("worker queue is full");
     }
 }
 
-inline worker_t & thread_pool_t::get_worker()
+inline Worker & ThreadPool::getWorker()
 {
-    size_t id = worker_t::get_worker_id_for_this_thread();
+    size_t id = Worker::getWorkerIdForCurrentThread();
 
-    if (id > m_workers_count) {
-        id = m_next_worker.fetch_add(1, std::memory_order_relaxed) % m_workers_count;
+    if (id > m_workers.size()) {
+        id = m_next_worker.fetch_add(1, std::memory_order_relaxed) % m_workers.size();
     }
 
-    return m_workers[id];
+    return *m_workers[id];
 }
 
 #endif

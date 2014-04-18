@@ -17,11 +17,11 @@ static const size_t THREADS_COUNT = 2;
 static const size_t CONCURRENCY = 4;
 static const size_t REPOST_COUNT = 1000000;
 
-struct heavy_t {
+struct Heavy {
     bool verbose;
     std::vector<char> resource;
 
-    heavy_t(bool verbose = false)
+    Heavy(bool verbose = false)
         : verbose(verbose)
         , resource(100*1024*1024)
     {
@@ -30,7 +30,7 @@ struct heavy_t {
         }
     }
 
-    heavy_t(const heavy_t &o)
+    Heavy(const Heavy &o)
         : verbose(o.verbose)
         , resource(o.resource)
     {
@@ -39,7 +39,7 @@ struct heavy_t {
         }
     }
 
-    heavy_t(heavy_t &&o)
+    Heavy(Heavy &&o)
         : verbose(o.verbose)
         , resource(std::move(o.resource))
     {
@@ -48,7 +48,7 @@ struct heavy_t {
         }
     }
 
-    heavy_t & operator==(const heavy_t &o)
+    Heavy & operator==(const Heavy &o)
     {
         verbose = o.verbose;
         resource = o.resource;
@@ -58,7 +58,7 @@ struct heavy_t {
         return *this;
     }
 
-    heavy_t & operator==(const heavy_t &&o)
+    Heavy & operator==(const Heavy &&o)
     {
         verbose = o.verbose;
         resource = std::move(o.resource);
@@ -68,7 +68,7 @@ struct heavy_t {
         return *this;
     }
 
-    ~heavy_t()
+    ~Heavy()
     {
         if (verbose) {
             std::cout << "heavy destructor. " << (resource.size() ? "Own resource" : "Don't own resource") << std::endl;
@@ -77,18 +77,18 @@ struct heavy_t {
 };
 
 
-struct repost_job_t {
-    //heavy_t heavy;
+struct RepostJob {
+    //Heavy heavy;
 
-    thread_pool_t *thread_pool;
+    ThreadPool *thread_pool;
 #ifndef WITHOUT_ASIO
-    asio_thread_pool_t *asio_thread_pool;
+    AsioThreadPool *asio_thread_pool;
 #endif
 
     size_t counter;
     long long int begin_count;
 
-    repost_job_t()
+    RepostJob()
         : thread_pool(0)
 #ifndef WITHOUT_ASIO
         , asio_thread_pool(0)
@@ -99,7 +99,7 @@ struct repost_job_t {
     }
 
 
-    explicit repost_job_t(thread_pool_t *thread_pool)
+    explicit RepostJob(ThreadPool *thread_pool)
         : thread_pool(thread_pool)
 #ifndef WITHOUT_ASIO
             , asio_thread_pool(0)
@@ -142,11 +142,11 @@ struct repost_job_t {
     }
 };
 
-struct copy_task_t
+struct CopyTask
 {
-    heavy_t heavy;
+    Heavy heavy;
 
-    copy_task_t() : heavy(true) {}
+    CopyTask() : heavy(true) {}
 
     void operator()()
     {
@@ -158,7 +158,7 @@ void test_standalone_func()
 {
 }
 
-struct test_member_t
+struct TestMember
 {
     void useless(int i, int j)
     {
@@ -176,21 +176,27 @@ int main(int, const char *[])
         std::cout << "***thread_pool_t***" << std::endl;
 
         {
-            thread_pool_t thread_pool(THREADS_COUNT);
+            ThreadPoolOptions options;
+            options.threads_count = THREADS_COUNT;
+            ThreadPool thread_pool(options);
             thread_pool.post(test_standalone_func);
-            thread_pool.post(std::bind(&test_member_t::useless, &test_member, 42, 42));
+            thread_pool.post(std::bind(&TestMember::useless, &test_member, 42, 42));
         }
 
         {
             std::cout << "Copy test [ENTER]" << std::endl;
-            thread_pool_t thread_pool(THREADS_COUNT);
-            thread_pool.post(copy_task_t());
+            ThreadPoolOptions options;
+            options.threads_count = THREADS_COUNT;
+            ThreadPool thread_pool(options);
+            thread_pool.post(CopyTask());
         }
 
         {
-            thread_pool_t thread_pool(THREADS_COUNT);
+            ThreadPoolOptions options;
+            options.threads_count = THREADS_COUNT;
+            ThreadPool thread_pool(options);
             for (size_t i = 0; i < CONCURRENCY; ++i) {
-                thread_pool.post(repost_job_t(&thread_pool));
+                thread_pool.post(RepostJob(&thread_pool));
             }
 
             std::cout << "Repost test [ENTER]" << std::endl;
@@ -202,7 +208,7 @@ int main(int, const char *[])
     {
         std::cout << "***asio_thread_pool_t***" << std::endl;
 
-        asio_thread_pool_t asio_thread_pool(THREADS_COUNT);
+        AsioThreadPool asio_thread_pool(THREADS_COUNT);
 
         std::cout << "Copy test [ENTER]" << std::endl;
         asio_thread_pool.post(copy_task_t());

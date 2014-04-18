@@ -9,22 +9,22 @@
 #include <functional>
 
 /**
- * @brief The fixed_function_t<R(ARGS...), STORAGE_SIZE> class implements functional object.
+ * @brief The FixedFunction<R(ARGS...), STORAGE_SIZE> class implements functional object.
  * This function is analog of 'std::function' with limited capabilities:
  *  - It supports only movable types.
  *  - The size of functional objects is limited to storage size.
  * Due to limitations above it is much faster on creation and copying than std::function.
  */
 template <typename SIGNATURE, size_t STORAGE_SIZE>
-class fixed_function_t;
+class FixedFunction;
 
 template <typename R, typename... ARGS, size_t STORAGE_SIZE>
-class fixed_function_t<R(ARGS...), STORAGE_SIZE> : noncopyable_t {
+class FixedFunction<R(ARGS...), STORAGE_SIZE> : NonCopyable {
 public:
     /**
-     * @brief fixed_function_t Empty constructor.
+     * @brief FixedFunction Empty constructor.
      */
-    fixed_function_t()
+    FixedFunction()
         : m_object_ptr(&m_storage)
         , m_method_ptr(nullptr)
         , m_delete_ptr(nullptr)
@@ -33,9 +33,9 @@ public:
 
     template <typename FUNC>
     /**
-     * @brief fixed_function_t Constructor from functional object.
+     * @brief FixedFunction Constructor from functional object.
      */
-    fixed_function_t(FUNC &&object)
+    FixedFunction(FUNC &&object)
     {
         typedef typename std::remove_reference<FUNC>::type unref_type;
 
@@ -55,34 +55,34 @@ public:
 
     template <typename RET, typename... PARAMS>
     /**
-     * @brief fixed_function_t Constructor from free function or static function.
+     * @brief FixedFunction Constructor from free function or static function.
      */
-    fixed_function_t(RET(*func_ptr)(PARAMS...))
-        : fixed_function_t(std::bind(func_ptr))
+    FixedFunction(RET(*func_ptr)(PARAMS...))
+        : FixedFunction(std::bind(func_ptr))
     {
     }
 
     /**
-     * @brief fixed_function_t Move constructor.
+     * @brief FixedFunction Move constructor.
      */
-    fixed_function_t(fixed_function_t &&o)
+    FixedFunction(FixedFunction &&o)
     {
-        move_from_other(o);
+        moveFromOther(o);
     }
 
     /**
      * @brief operator = Move assignment operator.
      */
-    fixed_function_t & operator=(fixed_function_t &&o)
+    FixedFunction & operator=(FixedFunction &&o)
     {
-        move_from_other(o);
+        moveFromOther(o);
         return *this;
     }
 
     /**
-     * @brief ~fixed_function_t Destructor.
+     * @brief ~FixedFunction Destructor.
      */
-    ~fixed_function_t()
+    ~FixedFunction()
     {
         if (m_delete_ptr)
             (*m_delete_ptr)(m_object_ptr);
@@ -90,6 +90,7 @@ public:
 
     /**
      * @brief operator () Execute stored functional object.
+     * @throws std::runtime_error if no functional object is stored.
      */
     R operator()(ARGS... args) const
     {
@@ -113,9 +114,9 @@ private:
      * @brief move_from_other Helper function to implement move-semantics.
      * @param o Other fixed funtion object.
      */
-    void move_from_other(fixed_function_t &o)
+    void moveFromOther(FixedFunction &o)
     {
-        this->~fixed_function_t();
+        this->~FixedFunction();
 
         m_method_ptr = o.m_method_ptr;
         m_delete_ptr = o.m_delete_ptr;

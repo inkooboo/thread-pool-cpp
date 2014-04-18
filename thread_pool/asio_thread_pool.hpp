@@ -8,17 +8,17 @@
 #include <vector>
 #include <memory>
 
-class asio_thread_pool_t
+class AsioThreadPool
 {
 public:
-    inline asio_thread_pool_t(size_t threads);
+    inline AsioThreadPool(size_t threads);
 
-    inline ~asio_thread_pool_t()
+    inline ~AsioThreadPool()
     {
         stop();
     }
 
-    inline void join_thread_pool();
+    inline void joinThreadPool();
 
     template <typename Handler>
     inline void post(Handler &&handler)
@@ -37,24 +37,24 @@ private:
     std::vector<std::thread> m_threads;
 };
 
-inline asio_thread_pool_t::asio_thread_pool_t(size_t threads)
+inline AsioThreadPool::AsioThreadPool(size_t threads)
     : m_threads(threads)
 {
     start();
 }
 
-inline void asio_thread_pool_t::start()
+inline void AsioThreadPool::start()
 {
     m_work.reset(new boost::asio::io_service::work(m_io_svc));
 
     for (auto &i : m_threads)
     {
-        i = std::thread(&asio_thread_pool_t::worker_thread_func, this);
+        i = std::thread(&AsioThreadPool::worker_thread_func, this);
     }
 
 }
 
-inline void asio_thread_pool_t::stop()
+inline void AsioThreadPool::stop()
 {
     m_work.reset();
 
@@ -69,14 +69,14 @@ inline void asio_thread_pool_t::stop()
     }
 }
 
-inline void asio_thread_pool_t::join_thread_pool()
+inline void AsioThreadPool::joinThreadPool()
 {
     m_io_svc.run();
 }
 
-inline void asio_thread_pool_t::worker_thread_func()
+inline void AsioThreadPool::worker_thread_func()
 {
-    join_thread_pool();
+    joinThreadPool();
 }
 
 #endif

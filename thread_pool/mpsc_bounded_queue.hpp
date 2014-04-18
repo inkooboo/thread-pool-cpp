@@ -6,9 +6,8 @@
 #include <atomic>
 #include <type_traits>
 #include <cstddef>
-
-/// Inspired by
-///
+#include <vector>
+#include <stdexcept>
 
 /**
  * @brief The mpmc_bounded_queue_t class implements bounded multi-producers/multi-consumers lock-free queue.
@@ -16,17 +15,16 @@
  * Inspired by Dmitry Vyukov's mpmc queue.
  * http://www.1024cores.net/home/lock-free-algorithms/queues/bounded-mpmc-queue
  */
-template <typename T, unsigned BUFFER_SIZE>
-class mpmc_bounded_queue_t : noncopyable_t {
-    enum {BUFFER_MASK = BUFFER_SIZE - 1};
-
-    static_assert(std::is_move_constructible<T>::value, "Type have to be move-constructable.");
-
+template <typename T>
+class MPMCBoundedQueue : NonCopyable {
+    static_assert(std::is_move_constructible<T>::value, "Should be of movable type");
 public:
     /**
-     * @brief mpmc_bounded_queue_t Constructor.
+     * @brief MPMCBoundedQueue Constructor.
+     * @param size Power of 2 number - queue length.
+     * @throws std::invalid_argument if size is bad.
      */
-    mpmc_bounded_queue_t();
+    MPMCBoundedQueue(size_t size);
 
     /**
      * @brief push Push data to queue.
@@ -44,48 +42,52 @@ public:
     bool pop(T &data);
 
 private:
-    struct cell_t {
+    struct Cell {
         std::atomic<size_t> sequence;
         T data;
     };
 
-    typedef char cacheline_pad_t[64];
+    typedef char Cacheline[64];
 
-    cacheline_pad_t pad0;
-    cell_t m_buffer[BUFFER_SIZE];
-    cacheline_pad_t pad1;
+    Cacheline pad0;
+    std::vector<Cell> m_buffer;
+    const size_t m_buffer_mask;
+    Cacheline pad1;
     std::atomic<size_t> m_enqueue_pos;
-    cacheline_pad_t pad2;
+    Cacheline pad2;
     std::atomic<size_t> m_dequeue_pos;
-    cacheline_pad_t pad3;
+    Cacheline pad3;
 };
 
 
 /// Implementation
 
-template <typename T, unsigned BUFFER_SIZE>
-inline mpmc_bounded_queue_t<T, BUFFER_SIZE>::mpmc_bounded_queue_t()
-    : m_enqueue_pos(0)
+template <typename T>
+inline MPMCBoundedQueue<T>::MPMCBoundedQueue(size_t size)
+    : m_buffer(size)
+    , m_buffer_mask(size - 1)
+    , m_enqueue_pos(0)
     , m_dequeue_pos(0)
 {
-    static_assert(std::is_move_constructible<T>::value, "Should be of movable type");
-    static_assert((BUFFER_SIZE >= 2) && ((BUFFER_SIZE & (BUFFER_SIZE - 1)) == 0),
-                  "buffer size should be a power of 2");
+    bool size_is_power_of_2 = (size >= 2) && ((size & (size - 1)) == 0);
+    if (!size_is_power_of_2) {
+       throw std::invalid_argument("buffer size should be a power of 2");
+    }
 
-    for (size_t i = 0; i < BUFFER_SIZE; ++i)
+    for (size_t i = 0; i < size; ++i)
     {
         m_buffer[i].sequence = i;
     }
 }
 
-template <typename T, unsigned BUFFER_SIZE>
+template <typename T>
 template <typename U>
-inline bool mpmc_bounded_queue_t<T, BUFFER_SIZE>::push(U &&data)
+inline bool MPMCBoundedQueue<T>::push(U &&data)
 {
-    cell_t *cell;
+    Cell *cell;
     size_t pos = m_enqueue_pos.load(std::memory_order_relaxed);
     for (;;) {
-        cell = &m_buffer[pos & BUFFER_MASK];
+        cell = &m_buffer[pos & m_buffer_mask];
         size_t seq = cell->sequence.load(std::memory_order_acquire);
         intptr_t dif = (intptr_t)seq - (intptr_t)pos;
         if (dif == 0) {
@@ -106,13 +108,13 @@ inline bool mpmc_bounded_queue_t<T, BUFFER_SIZE>::push(U &&data)
     return true;
 }
 
-template <typename T, unsigned BUFFER_SIZE>
-inline bool mpmc_bounded_queue_t<T, BUFFER_SIZE>::pop(T &data)
+template <typename T>
+inline bool MPMCBoundedQueue<T>::pop(T &data)
 {
-    cell_t *cell;
+    Cell *cell;
     size_t pos = m_dequeue_pos.load(std::memory_order_relaxed);
     for (;;) {
-        cell = &m_buffer[pos & BUFFER_MASK];
+        cell = &m_buffer[pos & m_buffer_mask];
         size_t seq = cell->sequence.load(std::memory_order_acquire);
         intptr_t dif = (intptr_t)seq - (intptr_t)(pos + 1);
         if (dif == 0) {
@@ -128,7 +130,7 @@ inline bool mpmc_bounded_queue_t<T, BUFFER_SIZE>::pop(T &data)
 
     data = std::move(cell->data);
 
-    cell->sequence.store(pos + BUFFER_MASK + 1, std::memory_order_release);
+    cell->sequence.store(pos + m_buffer_mask + 1, std::memory_order_release);
 
     return true;
 }

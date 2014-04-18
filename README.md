@@ -1,10 +1,10 @@
 thread-pool-cpp11
 =================
 
-1. Fast.
-2. Scalable.
-3. Header-only.
-4. Work stealing balancing strategy.
+ * It is highly scalable and fast.
+ * It is header only.
+ * It implements both work-stealing and work-distribution balancing startegies.
+ * It implements cooperative scheduling strategy for tasks.
 
 Example run:
 Post job to thread pool is up to 10 times faster than for boost::asio based thread pool.
