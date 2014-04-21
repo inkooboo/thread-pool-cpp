@@ -40,7 +40,7 @@ public:
         typedef typename std::remove_reference<FUNC>::type unref_type;
 
         static_assert(sizeof(unref_type) < STORAGE_SIZE,
-                      "functional object don't fit into internal storage");
+                      "functional object doesn't fit into internal storage");
 
         m_object_ptr = new (&m_storage) unref_type(std::forward<FUNC>(object));
 
