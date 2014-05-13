@@ -24,17 +24,17 @@ public:
     Worker(size_t queue_size);
 
     /**
-     * @brief ~Worker Destructor.
-     * Waits until the executing thread became finished.
-     */
-    ~Worker();
-
-    /**
      * @brief start Create the executing thread and start tasks execution.
      * @param id Worker ID.
      * @param steal_donor Sibling worker to steal task from it.
      */
     void start(size_t id, Worker *steal_donor);
+
+    /**
+     * @brief stop Stop all worker's thread and stealing activity.
+     * Waits until the executing thread became finished.
+     */
+    void stop();
 
     /**
      * @brief post Post task to queue.
@@ -45,7 +45,7 @@ public:
     bool post(Handler &&handler);
 
     /**
-     * @brief steal Steal one tsak from this worker queue.
+     * @brief steal Steal one task from this worker queue.
      * @param task Place for stealed task to be stored.
      * @return true on success.
      */
@@ -68,7 +68,6 @@ private:
     MPMCBoundedQueue<Task> m_queue;
     std::atomic<bool> m_running_flag;
     std::thread m_thread;
-    Worker *m_steal_donor;
 };
 
 
@@ -80,7 +79,7 @@ inline Worker::Worker(size_t queue_size)
 {
 }
 
-inline Worker::~Worker()
+inline void Worker::stop()
 {
     m_running_flag.store(false, std::memory_order_relaxed);
     m_thread.join();
@@ -88,7 +87,6 @@ inline Worker::~Worker()
 
 inline void Worker::start(size_t id, Worker *steal_donor)
 {
-    m_steal_donor = steal_donor;
     m_thread = std::thread(&Worker::threadFunc, this, id, steal_donor);
 }
 

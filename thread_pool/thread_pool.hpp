@@ -27,10 +27,15 @@ struct ThreadPoolOptions {
 class ThreadPool : NonCopyable {
 public:
     /**
-     * @brief thread_pool_t Construct and start new thread pool.
+     * @brief ThreadPool Construct and start new thread pool.
      * @param options Creation options.
      */
     explicit ThreadPool(const ThreadPoolOptions &options = ThreadPoolOptions());
+
+    /**
+     * @brief ~ThreadPool Stop all workers and descroy thread pool.
+     */
+    ~ThreadPool();
 
     /**
      * @brief post Post piece of job to thread pool.
@@ -75,6 +80,13 @@ inline ThreadPool::ThreadPool(const ThreadPoolOptions &options)
     for (size_t i = 0; i < m_workers.size(); ++i) {
         Worker *steal_donor = m_workers[(i + 1) % m_workers.size()].get();
         m_workers[i]->start(i, steal_donor);
+    }
+}
+
+inline ThreadPool::~ThreadPool()
+{
+    for (auto &worker_ptr : m_workers) {
+        worker_ptr->stop();
     }
 }
 
