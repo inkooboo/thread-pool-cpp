@@ -66,9 +66,8 @@ private:
     void threadFunc(size_t id, Worker *steal_donor);
 
     MPMCBoundedQueue<Task> m_queue;
-    bool m_stop_flag;
+    std::atomic<bool> m_running_flag;
     std::thread m_thread;
-    std::atomic<bool> m_starting;
     Worker *m_steal_donor;
 };
 
@@ -77,25 +76,20 @@ private:
 
 inline Worker::Worker(size_t queue_size)
     : m_queue(queue_size)
-    , m_stop_flag(false)
+    , m_running_flag(true)
 {
 }
 
 inline Worker::~Worker()
 {
-    post([&](){m_stop_flag = true;});
+    m_running_flag.store(false, std::memory_order_relaxed);
     m_thread.join();
 }
 
 inline void Worker::start(size_t id, Worker *steal_donor)
 {
     m_steal_donor = steal_donor;
-    m_starting = true;
     m_thread = std::thread(&Worker::threadFunc, this, id, steal_donor);
-    post([&](){m_starting = false;});
-    while (m_starting) {
-        std::this_thread::yield();
-    }
 }
 
 inline static size_t * thread_id()
@@ -126,7 +120,7 @@ inline void Worker::threadFunc(size_t id, Worker *steal_donor)
 
     Task handler;
 
-    while (!m_stop_flag)
+    while (m_running_flag.load(std::memory_order_relaxed))
         if (m_queue.pop(handler) || steal_donor->steal(handler)) {
             handler();
         } else {

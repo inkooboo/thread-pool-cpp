@@ -71,7 +71,7 @@ struct Heavy {
     ~Heavy()
     {
         if (verbose) {
-            std::cout << "heavy destructor. " << (resource.size() ? "Own resource" : "Don't own resource") << std::endl;
+            std::cout << "heavy destructor. " << (resource.size() ? "Owns resource" : "Doesn't own resource") << std::endl;
         }
     }
 };
