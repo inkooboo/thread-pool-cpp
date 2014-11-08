@@ -6,27 +6,28 @@
 #include <cstring>
 #include <stdexcept>
 #include <utility>
-#include <functional>
 
 /**
  * @brief The FixedFunction<R(ARGS...), STORAGE_SIZE> class implements functional object.
  * This function is analog of 'std::function' with limited capabilities:
- *  - It supports only movable types.
+ *  - It supports only move semantics.
  *  - The size of functional objects is limited to storage size.
  * Due to limitations above it is much faster on creation and copying than std::function.
  */
-template <typename SIGNATURE, size_t STORAGE_SIZE>
+template <typename SIGNATURE, size_t STORAGE_SIZE = 64>
 class FixedFunction;
 
 template <typename R, typename... ARGS, size_t STORAGE_SIZE>
 class FixedFunction<R(ARGS...), STORAGE_SIZE> : NonCopyable {
+
+    typedef R (*func_ptr_type)(ARGS...);
+
 public:
     /**
      * @brief FixedFunction Empty constructor.
      */
     FixedFunction()
-        : m_object_ptr(&m_storage)
-        , m_method_ptr(nullptr)
+        : m_method_ptr(nullptr)
         , m_delete_ptr(nullptr)
     {
     }
@@ -42,9 +43,9 @@ public:
         static_assert(sizeof(unref_type) < STORAGE_SIZE,
                       "functional object doesn't fit into internal storage");
 
-        m_object_ptr = new (&m_storage) unref_type(std::forward<FUNC>(object));
+        new (&m_storage) unref_type(std::forward<FUNC>(object));
 
-        m_method_ptr = [](void *object_ptr, ARGS... args) -> R {
+        m_method_ptr = [](void *object_ptr, func_ptr_type, ARGS... args) -> R {
             return static_cast<unref_type *>(object_ptr)->operator()(args...);
         };
 
@@ -58,8 +59,12 @@ public:
      * @brief FixedFunction Constructor from free function or static function.
      */
     FixedFunction(RET(*func_ptr)(PARAMS...))
-        : FixedFunction(std::bind(func_ptr))
     {
+        m_function_ptr = func_ptr;
+        m_method_ptr = [](void *, func_ptr_type f_ptr, ARGS... args) -> R {
+            return static_cast<RET(*)(PARAMS...)>(f_ptr)(args...);
+        };
+        m_delete_ptr = nullptr;
     }
 
     /**
@@ -85,26 +90,27 @@ public:
     ~FixedFunction()
     {
         if (m_delete_ptr)
-            (*m_delete_ptr)(m_object_ptr);
+            (*m_delete_ptr)(&m_storage);
     }
 
     /**
      * @brief operator () Execute stored functional object.
      * @throws std::runtime_error if no functional object is stored.
      */
-    R operator()(ARGS... args) const
+    R operator()(ARGS... args)
     {
         if (!m_method_ptr)
             throw std::runtime_error("call of empty functor");
-        return (*m_method_ptr)(m_object_ptr, args...);
+        return (*m_method_ptr)(&m_storage, m_function_ptr, args...);
     }
 
 private:
-    typename std::aligned_storage<STORAGE_SIZE, sizeof(size_t)>::type m_storage;
+    union {
+        typename std::aligned_storage<STORAGE_SIZE, sizeof(size_t)>::type m_storage;
+        func_ptr_type m_function_ptr;
+    };
 
-    void *m_object_ptr;
-
-    typedef R (*method_type)(void *, ARGS...);
+    typedef R (*method_type)(void *, func_ptr_type, ARGS...);
     method_type m_method_ptr;
 
     typedef void (*delete_type)(void *);
