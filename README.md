@@ -9,7 +9,7 @@ thread-pool-cpp
 Example run:
 Post job to thread pool is much faster than for boost::asio based thread pool.
 
-    ***thread pool cpp11***
+    ***thread pool cpp***
     Repost test [ENTER]
     reposted 1000001 in 61.6419 ms
     reposted 1000001 in 65.1405 ms
