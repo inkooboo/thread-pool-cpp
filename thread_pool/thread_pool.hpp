@@ -7,6 +7,8 @@
 #include <stdexcept>
 #include <memory>
 #include <vector>
+#include <future>
+#include <type_traits>
 
 /**
  * @brief The ThreadPoolOptions struct provides construction options for ThreadPool.
@@ -33,7 +35,7 @@ public:
     explicit ThreadPool(const ThreadPoolOptions &options = ThreadPoolOptions());
 
     /**
-     * @brief ~ThreadPool Stop all workers and descroy thread pool.
+     * @brief ~ThreadPool Stop all workers and destroy thread pool.
      */
     ~ThreadPool();
 
@@ -41,9 +43,20 @@ public:
      * @brief post Post piece of job to thread pool.
      * @param handler Handler to be called from thread pool worker. It has to be callable as 'handler()'.
      * @throws std::overflow_error if worker's queue is full.
+     * @note All exceptions thrown by handler will be suppressed. Use process to get result of handler's
+     * execution or exception rised.
      */
     template <typename Handler>
     void post(Handler &&handler);
+
+    /**
+     * @brief process Post piece of job to thread pool and get future for this job.
+     * @param handler Handler to be called from thread pool worker. It has to be callable as 'handler()'.
+     * @return Future which hold handler result or rised exception.
+     * @throws std::overflow_error if worker's queue is full.
+     */
+    template <typename Handler, typename R = typename std::result_of<Handler()>::type>
+    typename std::future<R> process(Handler &&handler);
 
 private:
     /**
@@ -98,6 +111,24 @@ inline void ThreadPool::post(Handler &&handler)
         throw std::overflow_error("worker queue is full");
     }
 }
+
+template <typename Handler, typename R>
+typename std::future<R> ThreadPool::process(Handler &&handler)
+{
+    std::packaged_task<R()> task([handler = std::move(handler)] () {
+        return handler();
+    });
+
+    std::future<R> result = task.get_future();
+
+    if (!getWorker().post(task))
+    {
+        throw std::overflow_error("worker queue is full");
+    }
+
+    return result;
+}
+
 
 inline Worker & ThreadPool::getWorker()
 {

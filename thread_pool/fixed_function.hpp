@@ -117,10 +117,10 @@ private:
         func_ptr_type m_function_ptr;
     };
 
-    typedef R (*method_type)(void *object_ptr, func_ptr_type free_func_ptr, ARGS... args);
+    typedef R(*method_type)(void *object_ptr, func_ptr_type free_func_ptr, ARGS... args);
     method_type m_method_ptr;
 
-    typedef void (*alloc_type)(void *storage_ptr, void *object_ptr);
+    typedef void(*alloc_type)(void *storage_ptr, void *object_ptr);
     alloc_type m_alloc_ptr;
 
     /**

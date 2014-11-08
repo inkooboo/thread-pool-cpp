@@ -1,4 +1,4 @@
-thread-pool-cpp11
+thread-pool-cpp
 =================
 
  * It is highly scalable and fast.
@@ -7,22 +7,21 @@ thread-pool-cpp11
  * It implements cooperative scheduling strategy for tasks.
 
 Example run:
-Post job to thread pool is up to 10 times faster than for boost::asio based thread pool.
+Post job to thread pool is much faster than for boost::asio based thread pool.
 
-    *******begin tests*******
-    ***thread_pool_t***
+    ***thread pool cpp11***
     Repost test [ENTER]
-    reposted 1000001 in 406.25 ms
-    reposted 1000001 in 406.25 ms
-    reposted 1000001 in 406.25 ms
-    reposted 1000001 in 406.25 ms
+    reposted 1000001 in 61.6419 ms
+    reposted 1000001 in 65.1405 ms
+    reposted 1000001 in 66.2461 ms
+    reposted 1000001 in 70.908 ms
 
-    ***asio_thread_pool_t***
+    ***asio thread pool***
     Repost test [ENTER]
-    reposted 1000001 in 3906.25 ms
-    reposted 1000001 in 3921.88 ms
-    reposted 1000001 in 3921.88 ms
-    reposted 1000001 in 3921.88 ms
+    reposted 1000001 in 1410.18 ms
+    reposted 1000001 in 1415.82 ms
+    reposted 1000001 in 1416.03 ms
+    reposted 1000001 in 1418.27 ms
 
 See benchmark/main.cpp for benchmark code.
 

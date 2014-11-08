@@ -1,14 +1,20 @@
-project(tests)
+#tests
 
-cmake_minimum_required(VERSION 2.8)
-
-ADD_DEFINITIONS(
-    -std=c++11 -Wall -Werror -O3
-)
-
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../thread_pool)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-add_executable(fixed_function fixed_function.t.cpp)
-target_link_libraries(fixed_function)
+add_executable(fixed_function_test fixed_function.t.cpp)
+target_link_libraries(fixed_function_test)
+add_custom_command(
+    TARGET fixed_function_test
+    POST_BUILD
+    COMMAND ./fixed_function_test
+)
+
+add_executable(thread_pool_test thread_pool.t.cpp)
+target_link_libraries(thread_pool_test pthread)
+add_custom_command(
+    TARGET thread_pool_test
+    POST_BUILD
+    COMMAND ./thread_pool_test
+)
 

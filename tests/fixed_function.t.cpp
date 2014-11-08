@@ -63,6 +63,8 @@ struct cnt {
 
 int main()
 {
+    std::cout << "*** Testing FixedFunction ***" << std::endl;
+
     print_overhead<char[8]>();
     print_overhead<char[16]>();
     print_overhead<char[32]>();

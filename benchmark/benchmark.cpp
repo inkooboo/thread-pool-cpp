@@ -1,4 +1,4 @@
-#define WITHOUT_ASIO 1
+//#define WITHOUT_ASIO 1
 
 #include <thread_pool.hpp>
 
@@ -9,11 +9,8 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
-#include <cassert>
 #include <vector>
-#include <future>
 
-static const size_t THREADS_COUNT = 2;
 static const size_t CONCURRENCY = 4;
 static const size_t REPOST_COUNT = 1000000;
 
@@ -110,7 +107,7 @@ struct RepostJob {
     }
 
 #ifndef WITHOUT_ASIO
-    explicit repost_job_t(asio_thread_pool_t *asio_thread_pool)
+    explicit RepostJob(AsioThreadPool *asio_thread_pool)
         : thread_pool(0)
         , asio_thread_pool(asio_thread_pool)
         , counter(0)
@@ -142,59 +139,13 @@ struct RepostJob {
     }
 };
 
-struct CopyTask
-{
-    Heavy heavy;
-
-    CopyTask() : heavy(true) {}
-
-    void operator()()
-    {
-        std::cout << "copy_task_t::operator()()" << std::endl;
-    }
-};
-
-void test_standalone_func()
-{
-}
-
-struct TestMember
-{
-    void useless(int i, int j)
-    {
-        (void)(i + j);
-    }
-
-} test_member;
-
 int main(int, const char *[])
 {
-    using namespace std::placeholders;
-
-    std::cout << "*******begin tests*******" << std::endl;
     {
-        std::cout << "***thread_pool_t***" << std::endl;
+        std::cout << "***thread pool cpp***" << std::endl;
 
         {
-            ThreadPoolOptions options;
-            options.threads_count = THREADS_COUNT;
-            ThreadPool thread_pool(options);
-            thread_pool.post(test_standalone_func);
-            thread_pool.post(std::bind(&TestMember::useless, &test_member, 42, 42));
-        }
-
-        {
-            std::cout << "Copy test [ENTER]" << std::endl;
-            ThreadPoolOptions options;
-            options.threads_count = THREADS_COUNT;
-            ThreadPool thread_pool(options);
-            thread_pool.post(CopyTask());
-        }
-
-        {
-            ThreadPoolOptions options;
-            options.threads_count = THREADS_COUNT;
-            ThreadPool thread_pool(options);
+            ThreadPool thread_pool;
             for (size_t i = 0; i < CONCURRENCY; ++i) {
                 thread_pool.post(RepostJob(&thread_pool));
             }
@@ -206,15 +157,17 @@ int main(int, const char *[])
 
 #ifndef WITHOUT_ASIO
     {
-        std::cout << "***asio_thread_pool_t***" << std::endl;
+        std::cout << "***asio thread pool***" << std::endl;
 
-        AsioThreadPool asio_thread_pool(THREADS_COUNT);
+        size_t workers_count = std::thread::hardware_concurrency();
+        if (0 == workers_count) {
+            workers_count = 1;
+        }
 
-        std::cout << "Copy test [ENTER]" << std::endl;
-        asio_thread_pool.post(copy_task_t());
+        AsioThreadPool asio_thread_pool(workers_count);
 
         for (size_t i = 0; i < CONCURRENCY; ++i) {
-            asio_thread_pool.post(repost_job_t(&asio_thread_pool));
+            asio_thread_pool.post(RepostJob(&asio_thread_pool));
         }
 
         std::cout << "Repost test [ENTER]" << std::endl;
