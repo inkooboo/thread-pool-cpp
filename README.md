@@ -23,5 +23,5 @@ Post job to thread pool is much faster than for boost::asio based thread pool.
     reposted 1000001 in 1416.03 ms
     reposted 1000001 in 1418.27 ms
 
-See benchmark/main.cpp for benchmark code.
+See benchmark/benchmark.cpp for benchmark code.
 
