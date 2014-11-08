@@ -49,6 +49,18 @@ void print_overhead() {
               << "    overhead is " << float(f_s - t_s)/t_s * 100 << "%\n";
 }
 
+
+static size_t created = 0;
+static size_t destroyed = 0;
+struct cnt {
+    std::string payload = "xyz";
+    cnt() { created++; }
+    cnt(const cnt&) { created++; }
+    cnt(const cnt&&) { created++; }
+    ~cnt() { destroyed++; }
+    std::string operator()() { return payload; }
+};
+
 int main()
 {
     print_overhead<char[8]>();
@@ -56,6 +68,20 @@ int main()
     print_overhead<char[32]>();
     print_overhead<char[64]>();
     print_overhead<char[128]>();
+
+    doTest("alloc/dealloc", [](){
+        {
+            cnt c1;
+            FixedFunction<std::string()> f1(c1);
+            FixedFunction<std::string()> f2;
+            f2 = std::move(f1);
+            FixedFunction<std::string()> f3(std::move(f2));
+            ASSERT(cnt().payload == f3());
+        }
+        ASSERT(created == destroyed);
+    });
+
+
 
     doTest("free func", []() {
         FixedFunction<int(int)> f(test_free_func);

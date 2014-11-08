@@ -11,6 +11,7 @@
  * @brief The FixedFunction<R(ARGS...), STORAGE_SIZE> class implements functional object.
  * This function is analog of 'std::function' with limited capabilities:
  *  - It supports only move semantics.
+ *  - It supports only movable types.
  *  - The size of functional objects is limited to storage size.
  * Due to limitations above it is much faster on creation and copying than std::function.
  */
@@ -28,7 +29,7 @@ public:
      */
     FixedFunction()
         : m_method_ptr(nullptr)
-        , m_delete_ptr(nullptr)
+        , m_alloc_ptr(nullptr)
     {
     }
 
@@ -42,16 +43,22 @@ public:
 
         static_assert(sizeof(unref_type) < STORAGE_SIZE,
                       "functional object doesn't fit into internal storage");
-
-        new (&m_storage) unref_type(std::forward<FUNC>(object));
+        static_assert(std::is_move_constructible<unref_type>::value, "Should be of movable type");
 
         m_method_ptr = [](void *object_ptr, func_ptr_type, ARGS... args) -> R {
             return static_cast<unref_type *>(object_ptr)->operator()(args...);
         };
 
-        m_delete_ptr = [](void *object_ptr) {
-            static_cast<unref_type *>(object_ptr)->~unref_type();
+        m_alloc_ptr = [](void *storage_ptr, void *object_ptr) {
+            if (object_ptr) {
+                unref_type *object = static_cast<unref_type *>(object_ptr);
+                new (storage_ptr) unref_type(std::move(*object));
+            } else {
+                static_cast<unref_type *>(storage_ptr)->~unref_type();
+            }
         };
+
+        m_alloc_ptr(&m_storage, &object);
     }
 
     template <typename RET, typename... PARAMS>
@@ -64,7 +71,7 @@ public:
         m_method_ptr = [](void *, func_ptr_type f_ptr, ARGS... args) -> R {
             return static_cast<RET(*)(PARAMS...)>(f_ptr)(args...);
         };
-        m_delete_ptr = nullptr;
+        m_alloc_ptr = nullptr;
     }
 
     /**
@@ -89,8 +96,8 @@ public:
      */
     ~FixedFunction()
     {
-        if (m_delete_ptr)
-            (*m_delete_ptr)(&m_storage);
+        if (m_alloc_ptr)
+            (*m_alloc_ptr)(&m_storage, nullptr);
     }
 
     /**
@@ -110,11 +117,11 @@ private:
         func_ptr_type m_function_ptr;
     };
 
-    typedef R (*method_type)(void *, func_ptr_type, ARGS...);
+    typedef R (*method_type)(void *object_ptr, func_ptr_type free_func_ptr, ARGS... args);
     method_type m_method_ptr;
 
-    typedef void (*delete_type)(void *);
-    delete_type m_delete_ptr;
+    typedef void (*alloc_type)(void *storage_ptr, void *object_ptr);
+    alloc_type m_alloc_ptr;
 
     /**
      * @brief move_from_other Helper function to implement move-semantics.
@@ -122,15 +129,12 @@ private:
      */
     void moveFromOther(FixedFunction &o)
     {
-        this->~FixedFunction();
+        if (this == &o)
+            return;
 
         m_method_ptr = o.m_method_ptr;
-        m_delete_ptr = o.m_delete_ptr;
-
-        memcpy(&m_storage, &o.m_storage, STORAGE_SIZE);
-
-        o.m_method_ptr = nullptr;
-        o.m_delete_ptr = nullptr;
+        m_alloc_ptr = o.m_alloc_ptr;
+        m_alloc_ptr(&m_storage, &o.m_storage);
     }
 };
 
