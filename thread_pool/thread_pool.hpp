@@ -52,8 +52,10 @@ public:
     /**
      * @brief process Post piece of job to thread pool and get future for this job.
      * @param handler Handler to be called from thread pool worker. It has to be callable as 'handler()'.
-     * @return Future which hold handler result or rised exception.
+     * @return Future which hold handler result or raised exception.
      * @throws std::overflow_error if worker's queue is full.
+     * @note This method of posting job to thread pool is much slower than 'post' due to std::future and
+     * std::packaged_task construction overhead.
      */
     template <typename Handler, typename R = typename std::result_of<Handler()>::type>
     typename std::future<R> process(Handler &&handler);
