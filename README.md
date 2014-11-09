@@ -9,19 +9,17 @@ thread-pool-cpp
 Example run:
 Post job to thread pool is much faster than for boost::asio based thread pool.
 
+    Benchmark job reposting
     ***thread pool cpp***
-    Repost test [ENTER]
-    reposted 1000001 in 61.6419 ms
-    reposted 1000001 in 65.1405 ms
-    reposted 1000001 in 66.2461 ms
-    reposted 1000001 in 70.908 ms
-
+    reposted 1000001 in 61.6754 ms
+    reposted 1000001 in 62.0187 ms
+    reposted 1000001 in 62.8785 ms
+    reposted 1000001 in 70.2714 ms
     ***asio thread pool***
-    Repost test [ENTER]
-    reposted 1000001 in 1410.18 ms
-    reposted 1000001 in 1415.82 ms
-    reposted 1000001 in 1416.03 ms
-    reposted 1000001 in 1418.27 ms
+    reposted 1000001 in 1381.58 ms
+    reposted 1000001 in 1390.35 ms
+    reposted 1000001 in 1391.84 ms
+    reposted 1000001 in 1393.19 ms
 
 See benchmark/benchmark.cpp for benchmark code.
 

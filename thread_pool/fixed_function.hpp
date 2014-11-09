@@ -31,6 +31,8 @@ public:
     template <typename FUNC>
     /**
      * @brief FixedFunction Constructor from functional object.
+     * @param object Functor object will be stored in the internal storage
+     * using move constructor. Unmovable objects are prohibited explicitly.
      */
     FixedFunction(FUNC &&object)
     {
@@ -38,6 +40,7 @@ public:
 
         static_assert(sizeof(unref_type) < STORAGE_SIZE,
                       "functional object doesn't fit into internal storage");
+        static_assert(std::is_move_constructible<unref_type>::value, "Should be of movable type");
 
         m_method_ptr = [](void *object_ptr, func_ptr_type, ARGS... args) -> R {
             return static_cast<unref_type *>(object_ptr)->operator()(args...);
@@ -46,7 +49,7 @@ public:
         m_alloc_ptr = [](void *storage_ptr, void *object_ptr) {
             if (object_ptr) {
                 unref_type *object = static_cast<unref_type *>(object_ptr);
-                new (storage_ptr) unref_type(moveOrCopy(*object));
+                new (storage_ptr) unref_type(std::move(*object));
             } else {
                 static_cast<unref_type *>(storage_ptr)->~unref_type();
             }
@@ -119,18 +122,6 @@ private:
         m_method_ptr = o.m_method_ptr;
         m_alloc_ptr = o.m_alloc_ptr;
         m_alloc_ptr(&m_storage, &o.m_storage);
-    }
-
-    template <typename T>
-    static T && moveOrCopy(T &obj, typename std::enable_if<std::is_move_constructible<T>::value >::type* = 0)
-    {
-        return std::move(obj);
-    }
-
-    template <typename T>
-    static T & moveOrCopy(T &obj, typename std::enable_if<!std::is_move_constructible<T>::value >::type* = 0)
-    {
-        return obj;
     }
 };
 
