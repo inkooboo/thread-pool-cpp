@@ -1,7 +1,6 @@
 #ifndef THREAD_POOL_HPP
 #define THREAD_POOL_HPP
 
-#include <noncopyable.hpp>
 #include <worker.hpp>
 #include <atomic>
 #include <stdexcept>
@@ -26,7 +25,7 @@ struct ThreadPoolOptions {
  * It implements both work-stealing and work-distribution balancing startegies.
  * It implements cooperative scheduling strategy for tasks.
  */
-class ThreadPool : NonCopyable {
+class ThreadPool {
 public:
     /**
      * @brief ThreadPool Construct and start new thread pool.
@@ -61,6 +60,9 @@ public:
     typename std::future<R> process(Handler &&handler);
 
 private:
+    ThreadPool(const ThreadPool&) = delete;
+    ThreadPool & operator=(const ThreadPool&) = delete;
+
     /**
      * @brief get_worker Helper function to select next executing worker.
      * @return Reference to worker.

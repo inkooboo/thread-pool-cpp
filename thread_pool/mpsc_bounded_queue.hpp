@@ -1,8 +1,6 @@
 #ifndef MPSC_QUEUE_HPP
 #define MPSC_QUEUE_HPP
 
-#include <noncopyable.hpp>
-
 #include <atomic>
 #include <type_traits>
 #include <cstddef>
@@ -16,7 +14,7 @@
  * http://www.1024cores.net/home/lock-free-algorithms/queues/bounded-mpmc-queue
  */
 template <typename T>
-class MPMCBoundedQueue : NonCopyable {
+class MPMCBoundedQueue {
     static_assert(std::is_move_constructible<T>::value, "Should be of movable type");
 public:
     /**
@@ -24,7 +22,7 @@ public:
      * @param size Power of 2 number - queue length.
      * @throws std::invalid_argument if size is bad.
      */
-    MPMCBoundedQueue(size_t size);
+    explicit MPMCBoundedQueue(size_t size);
 
     /**
      * @brief push Push data to queue.
@@ -42,6 +40,9 @@ public:
     bool pop(T &data);
 
 private:
+    MPMCBoundedQueue(const MPMCBoundedQueue&) = delete;
+    MPMCBoundedQueue & operator=(const MPMCBoundedQueue&) = delete;
+
     struct Cell {
         std::atomic<size_t> sequence;
         T data;

@@ -12,8 +12,7 @@
  * then it tries to steal task from the sibling worker. If stealing was unsuccessful
  * then spins with one millisecond delay.
  */
-class Worker : NonCopyable
-{
+class Worker {
 public:
     typedef FixedFunction<void(), 64> Task;
 
@@ -21,7 +20,7 @@ public:
      * @brief Worker Constructor.
      * @param queue_size Length of undelaying task queue.
      */
-    Worker(size_t queue_size);
+    explicit Worker(size_t queue_size);
 
     /**
      * @brief start Create the executing thread and start tasks execution.
@@ -58,6 +57,9 @@ public:
     static size_t getWorkerIdForCurrentThread();
 
 private:
+    Worker(const Worker&) = delete;
+    Worker & operator=(const Worker&) = delete;
+
     /**
      * @brief thread_func Executing thread function.
      * @param id Worker ID to be associated with this thread.

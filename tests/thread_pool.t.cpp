@@ -3,6 +3,7 @@
 
 #include <thread>
 #include <future>
+#include <functional>
 
 int main() {
     std::cout << "*** Testing ThreadPool ***" << std::endl;

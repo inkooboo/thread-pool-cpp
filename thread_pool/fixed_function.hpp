@@ -1,7 +1,6 @@
 #ifndef FIXED_FUNCTION_HPP
 #define FIXED_FUNCTION_HPP
 
-#include <noncopyable.hpp>
 #include <type_traits>
 #include <cstring>
 #include <stdexcept>
@@ -11,7 +10,6 @@
  * @brief The FixedFunction<R(ARGS...), STORAGE_SIZE> class implements functional object.
  * This function is analog of 'std::function' with limited capabilities:
  *  - It supports only move semantics.
- *  - It supports only movable types.
  *  - The size of functional objects is limited to storage size.
  * Due to limitations above it is much faster on creation and copying than std::function.
  */
@@ -19,14 +17,11 @@ template <typename SIGNATURE, size_t STORAGE_SIZE = 64>
 class FixedFunction;
 
 template <typename R, typename... ARGS, size_t STORAGE_SIZE>
-class FixedFunction<R(ARGS...), STORAGE_SIZE> : NonCopyable {
+class FixedFunction<R(ARGS...), STORAGE_SIZE> {
 
     typedef R (*func_ptr_type)(ARGS...);
 
 public:
-    /**
-     * @brief FixedFunction Empty constructor.
-     */
     FixedFunction()
         : m_method_ptr(nullptr)
         , m_alloc_ptr(nullptr)
@@ -43,7 +38,6 @@ public:
 
         static_assert(sizeof(unref_type) < STORAGE_SIZE,
                       "functional object doesn't fit into internal storage");
-        static_assert(std::is_move_constructible<unref_type>::value, "Should be of movable type");
 
         m_method_ptr = [](void *object_ptr, func_ptr_type, ARGS... args) -> R {
             return static_cast<unref_type *>(object_ptr)->operator()(args...);
@@ -52,7 +46,7 @@ public:
         m_alloc_ptr = [](void *storage_ptr, void *object_ptr) {
             if (object_ptr) {
                 unref_type *object = static_cast<unref_type *>(object_ptr);
-                new (storage_ptr) unref_type(std::move(*object));
+                new (storage_ptr) unref_type(moveOrCopy(*object));
             } else {
                 static_cast<unref_type *>(storage_ptr)->~unref_type();
             }
@@ -63,7 +57,7 @@ public:
 
     template <typename RET, typename... PARAMS>
     /**
-     * @brief FixedFunction Constructor from free function or static function.
+     * @brief FixedFunction Constructor from free function or static member.
      */
     FixedFunction(RET(*func_ptr)(PARAMS...))
     {
@@ -74,26 +68,17 @@ public:
         m_alloc_ptr = nullptr;
     }
 
-    /**
-     * @brief FixedFunction Move constructor.
-     */
     FixedFunction(FixedFunction &&o)
     {
         moveFromOther(o);
     }
 
-    /**
-     * @brief operator = Move assignment operator.
-     */
     FixedFunction & operator=(FixedFunction &&o)
     {
         moveFromOther(o);
         return *this;
     }
 
-    /**
-     * @brief ~FixedFunction Destructor.
-     */
     ~FixedFunction()
     {
         if (m_alloc_ptr)
@@ -112,6 +97,9 @@ public:
     }
 
 private:
+    FixedFunction & operator=(const FixedFunction &) = delete;
+    FixedFunction(const FixedFunction &) = delete;
+
     union {
         typename std::aligned_storage<STORAGE_SIZE, sizeof(size_t)>::type m_storage;
         func_ptr_type m_function_ptr;
@@ -123,10 +111,6 @@ private:
     typedef void(*alloc_type)(void *storage_ptr, void *object_ptr);
     alloc_type m_alloc_ptr;
 
-    /**
-     * @brief move_from_other Helper function to implement move-semantics.
-     * @param o Other fixed funtion object.
-     */
     void moveFromOther(FixedFunction &o)
     {
         if (this == &o)
@@ -135,6 +119,18 @@ private:
         m_method_ptr = o.m_method_ptr;
         m_alloc_ptr = o.m_alloc_ptr;
         m_alloc_ptr(&m_storage, &o.m_storage);
+    }
+
+    template <typename T>
+    static T && moveOrCopy(T &obj, typename std::enable_if<std::is_move_constructible<T>::value >::type* = 0)
+    {
+        return std::move(obj);
+    }
+
+    template <typename T>
+    static T & moveOrCopy(T &obj, typename std::enable_if<!std::is_move_constructible<T>::value >::type* = 0)
+    {
+        return obj;
     }
 };
 

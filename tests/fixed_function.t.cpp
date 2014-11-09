@@ -26,6 +26,9 @@ struct A {
     int b(const int &p) {
         return p;
     }
+    void c(int &i) {
+        i = 43;
+    }
 };
 
 template <typename T>
@@ -50,17 +53,6 @@ void print_overhead() {
 }
 
 
-static size_t created = 0;
-static size_t destroyed = 0;
-struct cnt {
-    std::string payload = "xyz";
-    cnt() { created++; }
-    cnt(const cnt&) { created++; }
-    cnt(const cnt&&) { created++; }
-    ~cnt() { destroyed++; }
-    std::string operator()() { return payload; }
-};
-
 int main()
 {
     std::cout << "*** Testing FixedFunction ***" << std::endl;
@@ -71,18 +63,72 @@ int main()
     print_overhead<char[64]>();
     print_overhead<char[128]>();
 
-    doTest("alloc/dealloc", [](){
+    doTest("alloc/dealloc movable", [](){
+        static size_t def = 0;
+        static size_t cop = 0;
+        static size_t mov = 0;
+        static size_t cop_ass = 0;
+        static size_t mov_ass = 0;
+        static size_t destroyed = 0;
+        struct cnt {
+            std::string payload = "xyz";
+            cnt() { def++; }
+            cnt(const cnt&) { cop++; }
+            cnt(cnt&&) { mov++; }
+            cnt & operator=(const cnt&) { cop_ass++; return *this; }
+            cnt & operator=(cnt&&) { mov_ass++; return *this; }
+            ~cnt() { destroyed++; }
+            std::string operator()() { return payload; }
+        };
+
         {
             cnt c1;
             FixedFunction<std::string()> f1(c1);
             FixedFunction<std::string()> f2;
             f2 = std::move(f1);
             FixedFunction<std::string()> f3(std::move(f2));
-            ASSERT(cnt().payload == f3());
+            ASSERT(std::string("xyz") == f3());
         }
-        ASSERT(created == destroyed);
+
+        ASSERT(def + cop + mov == destroyed);
+        ASSERT(1 == def);
+        ASSERT(0 == cop);
+        ASSERT(3 == mov);
+        ASSERT(0 == cop_ass);
+        ASSERT(0 == mov_ass);
     });
 
+
+    doTest("alloc/dealloc copyable", [](){
+        static size_t def = 0;
+        static size_t cop = 0;
+        static size_t cop_ass = 0;
+        static size_t destroyed = 0;
+        struct cnt {
+            std::string payload = "xyz";
+            cnt() { def++; }
+            cnt(const cnt&) { cop++; }
+            cnt(cnt&&) = delete;
+            cnt & operator=(const cnt&) { cop_ass++; return *this; }
+            cnt & operator=(cnt&&) = delete;
+            ~cnt() { destroyed++; }
+            std::string operator()() { return payload; }
+        };
+
+        {
+            cnt c1;
+            FixedFunction<std::string()> f1(c1);
+            FixedFunction<std::string()> f2;
+            f2 = std::move(f1);
+            FixedFunction<std::string()> f3(std::move(f2));
+            ASSERT(std::string("xyz") == f3());
+        }
+
+        ASSERT(def + cop == destroyed);
+        ASSERT(1 == def);
+        ASSERT(3 == cop);
+        ASSERT(0 == cop_ass);
+    });
 
 
     doTest("free func", []() {
@@ -101,6 +147,15 @@ int main()
         int p = 0;
         f(p, 42);
         ASSERT(42 == p);
+    });
+
+    doTest("class method void", []() {
+        using namespace std::placeholders;
+        A a;
+        int i = 0;
+        FixedFunction<void(int &)> f(std::bind(&A::c, &a, _1));
+        f(i);
+        ASSERT(43 == i);
     });
 
     doTest("class method 1", []() {
