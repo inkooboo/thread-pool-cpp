@@ -34,4 +34,21 @@ int main() {
         ASSERT(42 == r.get());
     });
 
+    struct my_exception {};
+
+    doTest("process job with exception", []() {
+        ThreadPool pool;
+
+        std::future<int> r = pool.process([]() {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            throw my_exception();
+            return 42;
+        });
+
+        try {
+            ASSERT(r.get() == 42 && !"should not be called, exception expected");
+        } catch (const my_exception &e) {
+        }
+    });
+
 }
