@@ -12,7 +12,7 @@
 #include <vector>
 #include <future>
 
-static const size_t CONCURRENCY = 4;
+static const size_t CONCURRENCY = 16;
 static const size_t REPOST_COUNT = 1000000;
 
 struct Heavy {
@@ -83,7 +83,7 @@ struct RepostJob {
     AsioThreadPool *asio_thread_pool;
 #endif
 
-    size_t counter;
+    volatile size_t counter;
     long long int begin_count;
     std::promise<void> *waiter;
 
