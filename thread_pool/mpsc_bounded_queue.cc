@@ -1,67 +1,67 @@
-#ifndef MPSC_QUEUE_HPP
-#define MPSC_QUEUE_HPP
+import std.atomic;
+import std.type_traits;
+import std.cstddef;
+import std.vector;
+import std.stdexcept;
 
-#include <atomic>
-#include <type_traits>
-#include <cstddef>
-#include <vector>
-#include <stdexcept>
+module thread_pool.mpmc_mounded_queue;
 
-/**
- * @brief The mpmc_bounded_queue_t class implements bounded multi-producers/multi-consumers lock-free queue.
- * Doesn't accept non-movabe types as T.
- * Inspired by Dmitry Vyukov's mpmc queue.
- * http://www.1024cores.net/home/lock-free-algorithms/queues/bounded-mpmc-queue
- */
-template <typename T>
-class MPMCBoundedQueue {
-    static_assert(std::is_move_constructible<T>::value, "Should be of movable type");
-public:
-    /**
-     * @brief MPMCBoundedQueue Constructor.
-     * @param size Power of 2 number - queue length.
-     * @throws std::invalid_argument if size is bad.
-     */
-    explicit MPMCBoundedQueue(size_t size);
+export {
 
     /**
-     * @brief push Push data to queue.
-     * @param data Data to be pushed.
-     * @return true on success.
+     * @brief The mpmc_bounded_queue_t class implements bounded multi-producers/multi-consumers lock-free queue.
+     * Doesn't accept non-movabe types as T.
+     * Inspired by Dmitry Vyukov's mpmc queue.
+     * http://www.1024cores.net/home/lock-free-algorithms/queues/bounded-mpmc-queue
      */
-    template <typename U>
-    bool push(U &&data);
+    template <typename T>
+    class MPMCBoundedQueue {
+    public:
+        /**
+         * @brief MPMCBoundedQueue Constructor.
+         * @param size Power of 2 number - queue length.
+         * @throws std::invalid_argument if size is bad.
+         */
+        explicit MPMCBoundedQueue(size_t size);
 
-    /**
-     * @brief pop Pop data from queue.
-     * @param data Place to store popped data.
-     * @return true on sucess.
-     */
-    bool pop(T &data);
+        /**
+         * @brief push Push data to queue.
+         * @param data Data to be pushed.
+         * @return true on success.
+         */
+        template <typename U>
+        bool push(U &&data);
 
-private:
-    MPMCBoundedQueue(const MPMCBoundedQueue&) = delete;
-    MPMCBoundedQueue & operator=(const MPMCBoundedQueue&) = delete;
+        /**
+         * @brief pop Pop data from queue.
+         * @param data Place to store popped data.
+         * @return true on sucess.
+         */
+        bool pop(T &data);
 
-    struct Cell {
-        std::atomic<size_t> sequence;
-        T data;
+    private:
+        MPMCBoundedQueue(const MPMCBoundedQueue&) = delete;
+        MPMCBoundedQueue & operator=(const MPMCBoundedQueue&) = delete;
+
+        struct Cell {
+            std::atomic<size_t> sequence;
+            T data;
+        };
+
+        typedef char Cacheline[64];
+
+        Cacheline pad0;
+        std::vector<Cell> m_buffer;
+        const size_t m_buffer_mask;
+        Cacheline pad1;
+        std::atomic<size_t> m_enqueue_pos;
+        Cacheline pad2;
+        std::atomic<size_t> m_dequeue_pos;
+        Cacheline pad3;
     };
 
-    typedef char Cacheline[64];
+}
 
-    Cacheline pad0;
-    std::vector<Cell> m_buffer;
-    const size_t m_buffer_mask;
-    Cacheline pad1;
-    std::atomic<size_t> m_enqueue_pos;
-    Cacheline pad2;
-    std::atomic<size_t> m_dequeue_pos;
-    Cacheline pad3;
-};
-
-
-/// Implementation
 
 template <typename T>
 inline MPMCBoundedQueue<T>::MPMCBoundedQueue(size_t size)
@@ -70,6 +70,8 @@ inline MPMCBoundedQueue<T>::MPMCBoundedQueue(size_t size)
     , m_enqueue_pos(0)
     , m_dequeue_pos(0)
 {
+    static_assert(std::is_move_constructible<T>::value, "Should be of movable type");
+
     bool size_is_power_of_2 = (size >= 2) && ((size & (size - 1)) == 0);
     if (!size_is_power_of_2) {
        throw std::invalid_argument("buffer size should be a power of 2");
@@ -136,4 +138,3 @@ inline bool MPMCBoundedQueue<T>::pop(T &data)
     return true;
 }
 
-#endif
