@@ -22,7 +22,6 @@ export {
     /**
      * @brief The ThreadPool class implements thread pool pattern.
      * It is highly scalable and fast.
-     * It is header only.
      * It implements both work-stealing and work-distribution balancing startegies.
      * It implements cooperative scheduling strategy for tasks.
      */
