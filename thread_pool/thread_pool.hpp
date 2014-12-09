@@ -51,7 +51,7 @@ public:
     /**
      * @brief process Post piece of job to thread pool and get future for this job.
      * @param handler Handler to be called from thread pool worker. It has to be callable as 'handler()'.
-     * @return Future which hold handler result or raised exception.
+     * @return Future which hold handler result or exception thrown.
      * @throws std::overflow_error if worker's queue is full.
      * @note This method of posting job to thread pool is much slower than 'post()' due to std::future and
      * std::packaged_task construction overhead.
@@ -63,10 +63,6 @@ private:
     ThreadPool(const ThreadPool&) = delete;
     ThreadPool & operator=(const ThreadPool&) = delete;
 
-    /**
-     * @brief get_worker Helper function to select next executing worker.
-     * @return Reference to worker.
-     */
     Worker & getWorker();
 
     std::vector<std::unique_ptr<Worker>> m_workers;
