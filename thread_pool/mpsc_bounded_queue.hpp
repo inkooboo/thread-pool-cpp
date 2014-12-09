@@ -8,7 +8,7 @@
 #include <stdexcept>
 
 /**
- * @brief The mpmc_bounded_queue_t class implements bounded multi-producers/multi-consumers lock-free queue.
+ * @brief The MPMCBoundedQueue class implements bounded multi-producers/multi-consumers lock-free queue.
  * Doesn't accept non-movabe types as T.
  * Inspired by Dmitry Vyukov's mpmc queue.
  * http://www.1024cores.net/home/lock-free-algorithms/queues/bounded-mpmc-queue
