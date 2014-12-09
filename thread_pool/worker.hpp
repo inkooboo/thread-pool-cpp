@@ -51,7 +51,7 @@ public:
     bool steal(Task &task);
 
     /**
-     * @brief get_worker_id_for_this_thread Return worker ID associated with current thread if exists.
+     * @brief getWorkerIdForCurrentThread Return worker ID associated with current thread if exists.
      * @return Worker ID.
      */
     static size_t getWorkerIdForCurrentThread();
@@ -61,7 +61,7 @@ private:
     Worker & operator=(const Worker&) = delete;
 
     /**
-     * @brief thread_func Executing thread function.
+     * @brief threadFunc Executing thread function.
      * @param id Worker ID to be associated with this thread.
      * @param steal_donor Sibling worker to steal task from it.
      */
