@@ -43,7 +43,7 @@ public:
      * @param handler Handler to be called from thread pool worker. It has to be callable as 'handler()'.
      * @throws std::overflow_error if worker's queue is full.
      * @note All exceptions thrown by handler will be suppressed. Use 'process()' to get result of handler's
-     * execution or exception rised.
+     * execution or exception thrown.
      */
     template <typename Handler>
     void post(Handler &&handler);
