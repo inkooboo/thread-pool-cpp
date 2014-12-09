@@ -42,7 +42,7 @@ public:
      * @brief post Post piece of job to thread pool.
      * @param handler Handler to be called from thread pool worker. It has to be callable as 'handler()'.
      * @throws std::overflow_error if worker's queue is full.
-     * @note All exceptions thrown by handler will be suppressed. Use process to get result of handler's
+     * @note All exceptions thrown by handler will be suppressed. Use 'process()' to get result of handler's
      * execution or exception rised.
      */
     template <typename Handler>
@@ -53,7 +53,7 @@ public:
      * @param handler Handler to be called from thread pool worker. It has to be callable as 'handler()'.
      * @return Future which hold handler result or raised exception.
      * @throws std::overflow_error if worker's queue is full.
-     * @note This method of posting job to thread pool is much slower than 'post' due to std::future and
+     * @note This method of posting job to thread pool is much slower than 'post()' due to std::future and
      * std::packaged_task construction overhead.
      */
     template <typename Handler, typename R = typename std::result_of<Handler()>::type>
