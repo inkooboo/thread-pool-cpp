@@ -13,8 +13,7 @@
  * @brief The ThreadPoolOptions struct provides construction options for ThreadPool.
  */
 struct ThreadPoolOptions {
-    enum {AUTODETECT = 0};
-    size_t threads_count = AUTODETECT;
+    size_t threads_count{std::thread::hardware_concurrency()};
     size_t worker_queue_size = 1024;
     Worker::OnStart onStart;
     Worker::OnStop onStop;
@@ -84,10 +83,6 @@ inline ThreadPool::ThreadPool(const ThreadPoolOptions &options)
     : m_next_worker(0)
 {
     size_t workers_count = options.threads_count;
-
-    if (ThreadPoolOptions::AUTODETECT == options.threads_count) {
-        workers_count = std::thread::hardware_concurrency();
-    }
 
     if (0 == workers_count) {
         workers_count = 1;
