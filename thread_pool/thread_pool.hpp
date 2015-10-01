@@ -16,6 +16,8 @@ struct ThreadPoolOptions {
     enum {AUTODETECT = 0};
     size_t threads_count = AUTODETECT;
     size_t worker_queue_size = 1024;
+    Worker::OnStart onStart;
+    Worker::OnStop onStop;
 };
 
 /**
@@ -58,6 +60,12 @@ public:
      */
     template <typename Handler, typename R = typename std::result_of<Handler()>::type>
     typename std::future<R> process(Handler &&handler);
+    
+    /**
+     * @brief getWorkerCount Returns the number of workers created by the thread pool
+     * @return Worker ID.
+     */
+    size_t getWorkerCount() const;
 
 private:
     ThreadPool(const ThreadPool&) = delete;
@@ -92,7 +100,7 @@ inline ThreadPool::ThreadPool(const ThreadPoolOptions &options)
 
     for (size_t i = 0; i < m_workers.size(); ++i) {
         Worker *steal_donor = m_workers[(i + 1) % m_workers.size()].get();
-        m_workers[i]->start(i, steal_donor);
+        m_workers[i]->start(i, steal_donor, options.onStart, options.onStop);
     }
 }
 
@@ -139,6 +147,10 @@ inline Worker & ThreadPool::getWorker()
     }
 
     return *m_workers[id];
+}
+
+inline size_t ThreadPool::getWorkerCount() const {
+    return m_workers.size();
 }
 
 #endif
