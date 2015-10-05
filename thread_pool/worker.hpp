@@ -16,8 +16,8 @@ class Worker {
 public:
     typedef FixedFunction<void(), 64> Task;
     
-    using OnStart = std::function<void()>;
-    using OnStop = std::function<void()>;
+    using OnStart = std::function<void(size_t id)>;
+    using OnStop = std::function<void(size_t id)>;
 
     /**
      * @brief Worker Constructor.
@@ -64,6 +64,12 @@ public:
 private:
     Worker(const Worker&) = delete;
     Worker & operator=(const Worker&) = delete;
+    
+    /**
+     * @brief thread_id Return worker ID associated with current thread if exists.
+     * @return Worker ID.
+     */
+    static size_t * thread_id();
 
     /**
      * @brief threadFunc Executing thread function.
@@ -99,12 +105,6 @@ inline void Worker::start(size_t id, Worker *steal_donor, OnStart onStart, OnSto
     m_thread = std::thread(&Worker::threadFunc, this, id, steal_donor, onStart, onStop);
 }
 
-inline static size_t * thread_id()
-{
-    static thread_local size_t tss_id = -1u;
-    return &tss_id;
-}
-
 inline size_t Worker::getWorkerIdForCurrentThread()
 {
     return *thread_id();
@@ -126,7 +126,7 @@ inline void Worker::threadFunc(size_t id, Worker *steal_donor, OnStart onStart, 
     *thread_id() = id;
     
     if (onStart) {
-        try { onStart(); } catch (...) {}
+        try { onStart(id); } catch (...) {}
     }
 
     Task handler;
@@ -139,7 +139,7 @@ inline void Worker::threadFunc(size_t id, Worker *steal_donor, OnStart onStart, 
         }
         
     if (onStop) {
-        try { onStop(); } catch (...) {}
+        try { onStop(id); } catch (...) {}
     }
 }
 
