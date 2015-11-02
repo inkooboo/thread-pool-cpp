@@ -75,6 +75,14 @@ private:
 
 /// Implementation
 
+namespace detail {
+    inline size_t * thread_id()
+    {
+        static thread_local size_t tss_id = -1u;
+        return &tss_id;
+    }
+}
+
 inline Worker::Worker(size_t queue_size)
     : m_queue(queue_size)
     , m_running_flag(true)
@@ -92,15 +100,9 @@ inline void Worker::start(size_t id, Worker *steal_donor)
     m_thread = std::thread(&Worker::threadFunc, this, id, steal_donor);
 }
 
-inline static size_t * thread_id()
-{
-    static thread_local size_t tss_id = -1u;
-    return &tss_id;
-}
-
 inline size_t Worker::getWorkerIdForCurrentThread()
 {
-    return *thread_id();
+    return *detail::thread_id();
 }
 
 template <typename Handler>
@@ -116,7 +118,7 @@ inline bool Worker::steal(Task &task)
 
 inline void Worker::threadFunc(size_t id, Worker *steal_donor)
 {
-    *thread_id() = id;
+    *detail::thread_id() = id;
 
     Task handler;
 

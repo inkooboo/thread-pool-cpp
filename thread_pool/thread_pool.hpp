@@ -106,8 +106,7 @@ inline ThreadPool::~ThreadPool()
 template <typename Handler>
 inline void ThreadPool::post(Handler &&handler)
 {
-    if (!getWorker().post(std::forward<Handler>(handler)))
-    {
+    if (!getWorker().post(std::forward<Handler>(handler))) {
         throw std::overflow_error("worker queue is full");
     }
 }
@@ -121,8 +120,7 @@ typename std::future<R> ThreadPool::process(Handler &&handler)
 
     std::future<R> result = task.get_future();
 
-    if (!getWorker().post(task))
-    {
+    if (!getWorker().post(task)) {
         throw std::overflow_error("worker queue is full");
     }
 

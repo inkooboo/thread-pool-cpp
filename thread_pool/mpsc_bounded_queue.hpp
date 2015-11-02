@@ -29,7 +29,6 @@
 
 #include <atomic>
 #include <type_traits>
-#include <cstddef>
 #include <vector>
 #include <stdexcept>
 
