@@ -14,7 +14,7 @@
  */
 class Worker {
 public:
-    typedef FixedFunction<void(), 64> Task;
+    typedef FixedFunction<void(), 128> Task;
     
     using OnStart = std::function<void(size_t id)>;
     using OnStop = std::function<void(size_t id)>;
