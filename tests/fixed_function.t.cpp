@@ -52,6 +52,9 @@ void print_overhead() {
               << "    overhead is " << float(f_s - t_s)/t_s * 100 << "%\n";
 }
 
+static std::string str_fun() {
+    return "123";
+}
 
 int main()
 {
@@ -63,7 +66,7 @@ int main()
     print_overhead<char[64]>();
     print_overhead<char[128]>();
 
-    doTest("alloc/dealloc", [](){
+    doTest("alloc/dealloc", []() {
         static size_t def = 0;
         static size_t cop = 0;
         static size_t mov = 0;
@@ -71,29 +74,45 @@ int main()
         static size_t mov_ass = 0;
         static size_t destroyed = 0;
         struct cnt {
-            std::string payload = "xyz";
+            std::string payload;
             cnt() { def++; }
-            cnt(const cnt&) { cop++; }
-            cnt(cnt&&) { mov++; }
-            cnt & operator=(const cnt&) { cop_ass++; return *this; }
-            cnt & operator=(cnt&&) { mov_ass++; return *this; }
+            cnt(const cnt &o) { payload = o.payload; cop++;}
+            cnt(cnt &&o) { payload = std::move(o.payload); mov++;}
+            cnt & operator=(const cnt &o) { payload = o.payload; cop_ass++; return *this; }
+            cnt & operator=(cnt &&o) { payload = std::move(o.payload); mov_ass++; return *this; }
             ~cnt() { destroyed++; }
             std::string operator()() { return payload; }
         };
 
         {
             cnt c1;
+            c1.payload = "xyz";
             FixedFunction<std::string()> f1(c1);
+            ASSERT(std::string("xyz") == f1());
+
             FixedFunction<std::string()> f2;
             f2 = std::move(f1);
+            ASSERT(std::string("xyz") == f2());
+
             FixedFunction<std::string()> f3(std::move(f2));
             ASSERT(std::string("xyz") == f3());
+
+            FixedFunction<std::string()> f4(str_fun);
+            ASSERT(std::string("123") == f4());
+
+            f4 = std::move(f3);
+            ASSERT(std::string("xyz") == f4());
+
+            cnt c2;
+            c2.payload = "qwe";
+            f4 = std::move(FixedFunction<std::string()>(c2));
+            ASSERT(std::string("qwe") == f4());
         }
 
         ASSERT(def + cop + mov == destroyed);
-        ASSERT(1 == def);
+        ASSERT(2 == def);
         ASSERT(0 == cop);
-        ASSERT(3 == mov);
+        ASSERT(6 == mov);
         ASSERT(0 == cop_ass);
         ASSERT(0 == mov_ass);
     });

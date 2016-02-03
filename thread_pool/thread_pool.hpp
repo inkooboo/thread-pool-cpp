@@ -13,9 +13,11 @@
  * @brief The ThreadPoolOptions struct provides construction options for ThreadPool.
  */
 struct ThreadPoolOptions {
-    enum {AUTODETECT = 0};
-    size_t threads_count = AUTODETECT;
+    
+    size_t threads_count{std::thread::hardware_concurrency()};
     size_t worker_queue_size = 1024;
+    Worker<>::OnStart onStart;
+    Worker<>::OnStop onStop;
 };
 
 /**
@@ -25,8 +27,13 @@ struct ThreadPoolOptions {
  * It implements both work-stealing and work-distribution balancing startegies.
  * It implements cooperative scheduling strategy for tasks.
  */
+
+template <size_t STORAGE_SIZE = 128>
 class ThreadPool {
 public:
+    
+    typedef Worker<STORAGE_SIZE> FixedWorker;
+    
     /**
      * @brief ThreadPool Construct and start new thread pool.
      * @param options Creation options.
@@ -46,8 +53,13 @@ public:
      * execution or exception thrown.
      */
     template <typename Handler>
-    void post(Handler &&handler);
-
+    void post(Handler &&handler)
+    {
+        if (!getWorker().post(std::forward<Handler>(handler))) {
+            throw std::overflow_error("worker queue is full");
+        }
+    }
+    
     /**
      * @brief process Post piece of job to thread pool and get future for this job.
      * @param handler Handler to be called from thread pool worker. It has to be callable as 'handler()'.
@@ -57,29 +69,45 @@ public:
      * std::packaged_task construction overhead.
      */
     template <typename Handler, typename R = typename std::result_of<Handler()>::type>
-    typename std::future<R> process(Handler &&handler);
+    typename std::future<R> process(Handler &&handler)
+    {
+        std::packaged_task<R()> task([handler = std::move(handler)] () {
+            return handler();
+        });
+        
+        std::future<R> result = task.get_future();
+        
+        if (!getWorker().post(task)) {
+            throw std::overflow_error("worker queue is full");
+        }
+        
+        return result;
+    }
+    
+    /**
+     * @brief getWorkerCount Returns the number of workers created by the thread pool
+     * @return Worker ID.
+     */
+    size_t getWorkerCount() const;
 
 private:
     ThreadPool(const ThreadPool&) = delete;
     ThreadPool & operator=(const ThreadPool&) = delete;
 
-    Worker & getWorker();
+    FixedWorker & getWorker();
 
-    std::vector<std::unique_ptr<Worker>> m_workers;
+    std::vector<std::unique_ptr<FixedWorker>> m_workers;
     std::atomic<size_t> m_next_worker;
 };
 
 
 /// Implementation
 
-inline ThreadPool::ThreadPool(const ThreadPoolOptions &options)
+template <size_t STORAGE_SIZE>
+inline ThreadPool<STORAGE_SIZE>::ThreadPool(const ThreadPoolOptions &options)
     : m_next_worker(0)
 {
     size_t workers_count = options.threads_count;
-
-    if (ThreadPoolOptions::AUTODETECT == options.threads_count) {
-        workers_count = std::thread::hardware_concurrency();
-    }
 
     if (0 == workers_count) {
         workers_count = 1;
@@ -87,52 +115,27 @@ inline ThreadPool::ThreadPool(const ThreadPoolOptions &options)
 
     m_workers.resize(workers_count);
     for (auto &worker_ptr : m_workers) {
-        worker_ptr.reset(new Worker(options.worker_queue_size));
+        worker_ptr.reset(new FixedWorker(options.worker_queue_size));
     }
 
     for (size_t i = 0; i < m_workers.size(); ++i) {
-        Worker *steal_donor = m_workers[(i + 1) % m_workers.size()].get();
-        m_workers[i]->start(i, steal_donor);
+        FixedWorker *steal_donor = m_workers[(i + 1) % m_workers.size()].get();
+        m_workers[i]->start(i, steal_donor, options.onStart, options.onStop);
     }
 }
 
-inline ThreadPool::~ThreadPool()
+template <size_t STORAGE_SIZE>
+inline ThreadPool<STORAGE_SIZE>::~ThreadPool()
 {
     for (auto &worker_ptr : m_workers) {
         worker_ptr->stop();
     }
 }
 
-template <typename Handler>
-inline void ThreadPool::post(Handler &&handler)
+template <size_t STORAGE_SIZE>
+inline typename ThreadPool<STORAGE_SIZE>::FixedWorker& ThreadPool<STORAGE_SIZE>::getWorker()
 {
-    if (!getWorker().post(std::forward<Handler>(handler)))
-    {
-        throw std::overflow_error("worker queue is full");
-    }
-}
-
-template <typename Handler, typename R>
-typename std::future<R> ThreadPool::process(Handler &&handler)
-{
-    std::packaged_task<R()> task([handler = std::move(handler)] () {
-        return handler();
-    });
-
-    std::future<R> result = task.get_future();
-
-    if (!getWorker().post(task))
-    {
-        throw std::overflow_error("worker queue is full");
-    }
-
-    return result;
-}
-
-
-inline Worker & ThreadPool::getWorker()
-{
-    size_t id = Worker::getWorkerIdForCurrentThread();
+    size_t id = FixedWorker::getWorkerIdForCurrentThread();
 
     if (id > m_workers.size()) {
         id = m_next_worker.fetch_add(1, std::memory_order_relaxed) % m_workers.size();
@@ -140,6 +143,7 @@ inline Worker & ThreadPool::getWorker()
 
     return *m_workers[id];
 }
+
 
 #endif
 

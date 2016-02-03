@@ -23,3 +23,6 @@ Post job to thread pool is much faster than for boost::asio based thread pool.
 
 See benchmark/benchmark.cpp for benchmark code.
 
+All code except [MPMCBoundedQueue](https://github.com/inkooboo/thread-pool-cpp/blob/master/thread_pool/mpsc_bounded_queue.hpp)
+is under MIT license.
+

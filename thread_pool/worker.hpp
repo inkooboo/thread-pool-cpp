@@ -1,6 +1,16 @@
 #ifndef WORKER_HPP
 #define WORKER_HPP
 
+// http://stackoverflow.com/a/25393790/5724090
+// Static/global variable exists in a per-thread context (thread local storage).
+#if defined (__GNUC__)
+    #define ATTRIBUTE_TLS __thread
+#elif defined (_MSC_VER)
+    #define ATTRIBUTE_TLS __declspec(thread)
+#else // !__GNUC__ && !_MSC_VER
+    #error "Define a thread local storage qualifier for your compiler/platform!"
+#endif
+
 #include <fixed_function.hpp>
 #include <mpsc_bounded_queue.hpp>
 #include <atomic>
@@ -12,9 +22,14 @@
  * then it tries to steal task from the sibling worker. If stealing was unsuccessful
  * then spins with one millisecond delay.
  */
+
+template <size_t STORAGE_SIZE = 128>
 class Worker {
 public:
-    typedef FixedFunction<void(), 64> Task;
+    typedef FixedFunction<void(), STORAGE_SIZE> Task;
+    
+    using OnStart = std::function<void(size_t id)>;
+    using OnStop = std::function<void(size_t id)>;
 
     /**
      * @brief Worker Constructor.
@@ -26,8 +41,10 @@ public:
      * @brief start Create the executing thread and start tasks execution.
      * @param id Worker ID.
      * @param steal_donor Sibling worker to steal task from it.
+     * @param onStart A handler which is executed when each thread pool thread starts
+     * @param onStop A handler which is executed when each thread pool thread stops
      */
-    void start(size_t id, Worker *steal_donor);
+    void start(size_t id, Worker *steal_donor, OnStart onStart, OnStop onStop);
 
     /**
      * @brief stop Stop all worker's thread and stealing activity.
@@ -41,7 +58,10 @@ public:
      * @return true on success.
      */
     template <typename Handler>
-    bool post(Handler &&handler);
+    bool post(Handler &&handler)
+    {
+        return m_queue.push(std::forward<Handler>(handler));
+    }
 
     /**
      * @brief steal Steal one task from this worker queue.
@@ -59,13 +79,21 @@ public:
 private:
     Worker(const Worker&) = delete;
     Worker & operator=(const Worker&) = delete;
+    
+    /**
+     * @brief thread_id Return worker ID associated with current thread if exists.
+     * @return Worker ID.
+     */
+    static size_t * thread_id();
 
     /**
      * @brief threadFunc Executing thread function.
      * @param id Worker ID to be associated with this thread.
      * @param steal_donor Sibling worker to steal task from it.
+     * @param onStart A handler which is executed when each thread pool thread starts
+     * @param onStop A handler which is executed when each thread pool thread stops
      */
-    void threadFunc(size_t id, Worker *steal_donor);
+    void threadFunc(size_t id, Worker *steal_donor, OnStart onStart, OnStop onStop);
 
     MPMCBoundedQueue<Task> m_queue;
     std::atomic<bool> m_running_flag;
@@ -75,48 +103,54 @@ private:
 
 /// Implementation
 
-inline Worker::Worker(size_t queue_size)
+namespace detail {
+    inline size_t * thread_id()
+    {
+        static ATTRIBUTE_TLS size_t tss_id = -1u;
+        return &tss_id;
+    }
+}
+
+template <size_t STORAGE_SIZE>
+inline Worker<STORAGE_SIZE>::Worker(size_t queue_size)
     : m_queue(queue_size)
     , m_running_flag(true)
 {
 }
 
-inline void Worker::stop()
+template <size_t STORAGE_SIZE>
+inline void Worker<STORAGE_SIZE>::stop()
 {
     m_running_flag.store(false, std::memory_order_relaxed);
     m_thread.join();
 }
 
-inline void Worker::start(size_t id, Worker *steal_donor)
+template <size_t STORAGE_SIZE>
+inline void Worker<STORAGE_SIZE>::start(size_t id, Worker *steal_donor, OnStart onStart, OnStop onStop)
 {
-    m_thread = std::thread(&Worker::threadFunc, this, id, steal_donor);
+    m_thread = std::thread(&Worker::threadFunc, this, id, steal_donor, onStart, onStop);
 }
 
-inline static size_t * thread_id()
+template <size_t STORAGE_SIZE>
+inline size_t Worker<STORAGE_SIZE>::getWorkerIdForCurrentThread()
 {
-    static thread_local size_t tss_id = -1u;
-    return &tss_id;
+    return *detail::thread_id();
 }
 
-inline size_t Worker::getWorkerIdForCurrentThread()
-{
-    return *thread_id();
-}
-
-template <typename Handler>
-inline bool Worker::post(Handler &&handler)
-{
-    return m_queue.push(std::forward<Handler>(handler));
-}
-
-inline bool Worker::steal(Task &task)
+template <size_t STORAGE_SIZE>
+inline bool Worker<STORAGE_SIZE>::steal(Task &task)
 {
     return m_queue.pop(task);
 }
 
-inline void Worker::threadFunc(size_t id, Worker *steal_donor)
+template <size_t STORAGE_SIZE>
+inline void Worker<STORAGE_SIZE>::threadFunc(size_t id, Worker *steal_donor, OnStart onStart, OnStop onStop)
 {
-    *thread_id() = id;
+    *detail::thread_id() = id;
+    
+    if (onStart) {
+        try { onStart(id); } catch (...) {}
+    }
 
     Task handler;
 
@@ -125,6 +159,10 @@ inline void Worker::threadFunc(size_t id, Worker *steal_donor)
             try {handler();} catch (...) {}
         } else {
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        
+    if (onStop) {
+        try { onStop(id); } catch (...) {}
         }
 }
 

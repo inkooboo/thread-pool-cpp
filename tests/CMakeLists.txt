@@ -10,7 +10,7 @@ add_custom_command(
     COMMAND ./fixed_function_test
 )
 
-add_executable(thread_pool_test thread_pool.t.cpp)
+add_executable(thread_pool_test thread_pool.t.cpp thread_pool2.t.cpp)
 target_link_libraries(thread_pool_test pthread)
 add_custom_command(
     TARGET thread_pool_test

@@ -23,23 +23,26 @@ class FixedFunction<R(ARGS...), STORAGE_SIZE> {
 
 public:
     FixedFunction()
-        : m_method_ptr(nullptr)
+        : m_function_ptr(nullptr)
+        , m_method_ptr(nullptr)
         , m_alloc_ptr(nullptr)
     {
     }
 
-    template <typename FUNC>
     /**
      * @brief FixedFunction Constructor from functional object.
      * @param object Functor object will be stored in the internal storage
      * using move constructor. Unmovable objects are prohibited explicitly.
      */
+    template <typename FUNC>
     FixedFunction(FUNC &&object)
+        : FixedFunction()
     {
         typedef typename std::remove_reference<FUNC>::type unref_type;
 
         static_assert(sizeof(unref_type) < STORAGE_SIZE,
                       "functional object doesn't fit into internal storage");
+        
         static_assert(std::is_move_constructible<unref_type>::value, "Should be of movable type");
 
         m_method_ptr = [](void *object_ptr, func_ptr_type, ARGS... args) -> R {
@@ -58,20 +61,21 @@ public:
         m_alloc_ptr(&m_storage, &object);
     }
 
-    template <typename RET, typename... PARAMS>
     /**
      * @brief FixedFunction Constructor from free function or static member.
      */
+    template <typename RET, typename... PARAMS>
     FixedFunction(RET(*func_ptr)(PARAMS...))
+        : FixedFunction()
     {
         m_function_ptr = func_ptr;
         m_method_ptr = [](void *, func_ptr_type f_ptr, ARGS... args) -> R {
             return static_cast<RET(*)(PARAMS...)>(f_ptr)(args...);
         };
-        m_alloc_ptr = nullptr;
     }
 
     FixedFunction(FixedFunction &&o)
+        : FixedFunction()
     {
         moveFromOther(o);
     }
@@ -85,7 +89,7 @@ public:
     ~FixedFunction()
     {
         if (m_alloc_ptr)
-            (*m_alloc_ptr)(&m_storage, nullptr);
+            m_alloc_ptr(&m_storage, nullptr);
     }
 
     /**
@@ -96,7 +100,7 @@ public:
     {
         if (!m_method_ptr)
             throw std::runtime_error("call of empty functor");
-        return (*m_method_ptr)(&m_storage, m_function_ptr, args...);
+        return m_method_ptr(&m_storage, m_function_ptr, args...);
     }
 
 private:
@@ -119,9 +123,22 @@ private:
         if (this == &o)
             return;
 
+        if (m_alloc_ptr) {
+            m_alloc_ptr(&m_storage, nullptr);
+            m_alloc_ptr = nullptr;
+        } else {
+            m_function_ptr = nullptr;
+        }
+
         m_method_ptr = o.m_method_ptr;
-        m_alloc_ptr = o.m_alloc_ptr;
-        m_alloc_ptr(&m_storage, &o.m_storage);
+        o.m_method_ptr = nullptr;
+
+        if (o.m_alloc_ptr) {
+            m_alloc_ptr = o.m_alloc_ptr;
+            m_alloc_ptr(&m_storage, &o.m_storage);
+        } else {
+            m_function_ptr = o.m_function_ptr;
+        }
     }
 };
 
