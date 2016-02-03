@@ -40,8 +40,11 @@ public:
     {
         typedef typename std::remove_reference<FUNC>::type unref_type;
 
+#if THREAD_POOL_FIXED_FUNCTION_SIZE_CONSTRAINT
         static_assert(sizeof(unref_type) < STORAGE_SIZE,
                       "functional object doesn't fit into internal storage");
+#endif
+        
         static_assert(std::is_move_constructible<unref_type>::value, "Should be of movable type");
 
         m_method_ptr = [](void *object_ptr, func_ptr_type, ARGS... args) -> R {
