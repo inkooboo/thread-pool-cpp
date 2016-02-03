@@ -1,6 +1,16 @@
 #ifndef WORKER_HPP
 #define WORKER_HPP
 
+// http://stackoverflow.com/a/25393790/5724090
+// Static/global variable exists in a per-thread context (thread local storage).
+#if defined (__GNUC__)
+    #define ATTRIBUTE_TLS __thread
+#elif defined (_MSC_VER)
+    #define ATTRIBUTE_TLS __declspec(thread)
+#else // !__GNUC__ && !_MSC_VER
+    #error "Define a thread local storage qualifier for your compiler/platform!"
+#endif
+
 #include <fixed_function.hpp>
 #include <mpsc_bounded_queue.hpp>
 #include <atomic>
@@ -78,7 +88,7 @@ private:
 namespace detail {
     inline size_t * thread_id()
     {
-        static thread_local size_t tss_id = -1u;
+        static ATTRIBUTE_TLS size_t tss_id = -1u;
         return &tss_id;
     }
 }
