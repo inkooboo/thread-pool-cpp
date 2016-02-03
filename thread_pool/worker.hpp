@@ -22,9 +22,11 @@
  * then it tries to steal task from the sibling worker. If stealing was unsuccessful
  * then spins with one millisecond delay.
  */
+
+template <size_t STORAGE_SIZE = 128>
 class Worker {
 public:
-    typedef FixedFunction<void(), 128> Task;
+    typedef FixedFunction<void(), STORAGE_SIZE> Task;
     
     using OnStart = std::function<void(size_t id)>;
     using OnStop = std::function<void(size_t id)>;
@@ -56,7 +58,10 @@ public:
      * @return true on success.
      */
     template <typename Handler>
-    bool post(Handler &&handler);
+    bool post(Handler &&handler)
+    {
+        return m_queue.push(std::forward<Handler>(handler));
+    }
 
     /**
      * @brief steal Steal one task from this worker queue.
@@ -106,40 +111,40 @@ namespace detail {
     }
 }
 
-inline Worker::Worker(size_t queue_size)
+template <size_t STORAGE_SIZE>
+inline Worker<STORAGE_SIZE>::Worker(size_t queue_size)
     : m_queue(queue_size)
     , m_running_flag(true)
 {
 }
 
-inline void Worker::stop()
+template <size_t STORAGE_SIZE>
+inline void Worker<STORAGE_SIZE>::stop()
 {
     m_running_flag.store(false, std::memory_order_relaxed);
     m_thread.join();
 }
 
-inline void Worker::start(size_t id, Worker *steal_donor, OnStart onStart, OnStop onStop)
+template <size_t STORAGE_SIZE>
+inline void Worker<STORAGE_SIZE>::start(size_t id, Worker *steal_donor, OnStart onStart, OnStop onStop)
 {
     m_thread = std::thread(&Worker::threadFunc, this, id, steal_donor, onStart, onStop);
 }
 
-inline size_t Worker::getWorkerIdForCurrentThread()
+template <size_t STORAGE_SIZE>
+inline size_t Worker<STORAGE_SIZE>::getWorkerIdForCurrentThread()
 {
     return *detail::thread_id();
 }
 
-template <typename Handler>
-inline bool Worker::post(Handler &&handler)
-{
-    return m_queue.push(std::forward<Handler>(handler));
-}
-
-inline bool Worker::steal(Task &task)
+template <size_t STORAGE_SIZE>
+inline bool Worker<STORAGE_SIZE>::steal(Task &task)
 {
     return m_queue.pop(task);
 }
 
-inline void Worker::threadFunc(size_t id, Worker *steal_donor, OnStart onStart, OnStop onStop)
+template <size_t STORAGE_SIZE>
+inline void Worker<STORAGE_SIZE>::threadFunc(size_t id, Worker *steal_donor, OnStart onStart, OnStop onStop)
 {
     *detail::thread_id() = id;
     
