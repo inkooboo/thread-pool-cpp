@@ -1,11 +1,10 @@
 #include <thread_pool.hpp>
 #include <test.hpp>
 
+#include <thread>
 #include <future>
 #include <functional>
-#include <sstream>
-#include <thread>
-#include <tuple>
+#include <memory>
 
 int main() {
     std::cout << "*** Testing ThreadPool ***" << std::endl;
@@ -52,31 +51,32 @@ int main() {
         } catch (const my_exception &e) {
         }
     });
+    
+    doTest("post job to threadpool with onStart/onStop", []() {
+        std::atomic<int> someValue{0};
+        ThreadPoolOptions options;
+        options.onStart = [&someValue](){ ++someValue; };
+        options.onStop = [&someValue](){ --someValue; };
+        
+        if (true) {
+            ThreadPool pool{options};
 
-    doTest("multiple compilation units", []() {
-        extern size_t getWorkerIdForCurrentThread();
-        extern size_t getWorkerIdForCurrentThread2();
+            std::packaged_task<int()> t([&someValue](){
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                return someValue.load();
+            });
 
-        ThreadPool pool;
+            std::future<int> r = t.get_future();
 
-        std::future<std::tuple<size_t, size_t, size_t, size_t>> r = pool.process([]() {
-            return std::make_tuple(Worker::getWorkerIdForCurrentThread(),
-                                   *detail::thread_id(),
-                                   getWorkerIdForCurrentThread(),
-                                   getWorkerIdForCurrentThread2());
-        });
+            pool.post(t);
 
-        const auto t = r.get();
-        const auto id0 = std::get<0>(t);
-        const auto id1 = std::get<1>(t);
-        const auto id2 = std::get<2>(t);
-        const auto id3 = std::get<3>(t);
+            const auto result = r.get();
 
-        std::cout << " " << id0 << " " << id1 << " " << id2 << " " << id3;
-
-        ASSERT(id0 == id1);
-        ASSERT(id1 == id2);
-        ASSERT(id2 == id3);
+            ASSERT(0 < result);
+            ASSERT(pool.getWorkerCount() == result);
+        }
+        
+        ASSERT(0 == someValue);
     });
 
 }
