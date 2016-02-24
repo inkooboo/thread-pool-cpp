@@ -1,6 +1,6 @@
 //#define WITHOUT_ASIO 1
 
-#include <thread_pool.hpp>
+#include <thread_pool/thread_pool.hpp>
 
 #ifndef WITHOUT_ASIO
 #include <asio_thread_pool.hpp>
@@ -11,6 +11,8 @@
 #include <thread>
 #include <vector>
 #include <future>
+
+using namespace tp;
 
 static const size_t CONCURRENCY = 16;
 static const size_t REPOST_COUNT = 1000000;

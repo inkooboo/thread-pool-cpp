@@ -1,4 +1,4 @@
-#include <thread_pool.hpp>
+#include <thread_pool/thread_pool.hpp>
 #include <test.hpp>
 
 #include <future>
@@ -6,6 +6,8 @@
 #include <sstream>
 #include <thread>
 #include <tuple>
+
+using namespace tp;
 
 int main() {
     std::cout << "*** Testing ThreadPool ***" << std::endl;
