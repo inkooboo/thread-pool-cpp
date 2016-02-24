@@ -34,8 +34,8 @@
 // should not be interpreted as representing official policies, either expressed
 // or implied, of Dmitry Vyukov.
 
-#ifndef MPSC_QUEUE_HPP
-#define MPSC_QUEUE_HPP
+#ifndef THREAD_POOL_MPSC_QUEUE_HPP
+#define THREAD_POOL_MPSC_QUEUE_HPP
 
 #include <atomic>
 #include <type_traits>
@@ -44,7 +44,6 @@
 
 namespace tp
 {
-
     /**
      * @brief The MPMCBoundedQueue class implements bounded
      * multi-producers/multi-consumers lock-free queue.

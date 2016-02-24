@@ -1,5 +1,5 @@
-#ifndef WORKER_HPP
-#define WORKER_HPP
+#ifndef THREAD_POOL_WORKER_HPP
+#define THREAD_POOL_WORKER_HPP
 
 #include <thread_pool/fixed_function.hpp>
 #include <thread_pool/mpsc_bounded_queue.hpp>
@@ -8,7 +8,6 @@
 
 namespace tp
 {
-
     /**
      * @brief The Worker class owns task queue and executing thread.
      * In executing thread it tries to pop task from queue. If queue is empty

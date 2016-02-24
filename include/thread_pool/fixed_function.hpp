@@ -1,5 +1,5 @@
-#ifndef FIXED_FUNCTION_HPP
-#define FIXED_FUNCTION_HPP
+#ifndef THREAD_POOL_FIXED_FUNCTION_HPP
+#define THREAD_POOL_FIXED_FUNCTION_HPP
 
 #include <type_traits>
 #include <cstring>
