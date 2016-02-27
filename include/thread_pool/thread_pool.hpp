@@ -1,7 +1,6 @@
 #ifndef THREAD_POOL_HPP
 #define THREAD_POOL_HPP
 
-#include <thread_pool/future_dependencies.hpp>
 #include <thread_pool/worker.hpp>
 #include <atomic>
 #include <stdexcept>
@@ -25,6 +24,30 @@ namespace tp
         size_t worker_queue_size = 1024;
     };
 
+    template <template <typename...> class TPackagedTask>
+    struct PackagedTaskAdaptorStd
+    {
+        template <typename R>
+        using type = TPackagedTask<R()>;
+    };
+
+    template <template <typename...> class TPackagedTask>
+    struct PackagedTaskAdaptorBoost
+    {
+        template <typename R>
+        using type = TPackagedTask<R>;
+    };
+
+    template <                        // .
+        typename TPackagedTaskAdaptor // .
+        >
+    struct ThreadPoolSettings
+    {
+        template <typename R>
+        using packaged_task_type =
+            typename TPackagedTaskAdaptor::template type<R>;
+    };
+
     /**
      * @brief The ThreadPool class implements thread pool pattern.
      * It is highly scalable and fast.
@@ -33,6 +56,7 @@ namespace tp
      * startegies.
      * It implements cooperative scheduling strategy for tasks.
      */
+    template <typename TSettings>
     class ThreadPool
     {
     public:
@@ -91,7 +115,8 @@ namespace tp
 
     /// Implementation
 
-    inline ThreadPool::ThreadPool(const ThreadPoolOptions& options)
+    template <typename TSettings>
+    inline ThreadPool<TSettings>::ThreadPool(const ThreadPoolOptions& options)
         : m_next_worker(0)
     {
         size_t workers_count = options.threads_count;
@@ -119,7 +144,8 @@ namespace tp
         }
     }
 
-    inline ThreadPool::~ThreadPool()
+    template <typename TSettings>
+    inline ThreadPool<TSettings>::~ThreadPool()
     {
         for(auto& worker_ptr : m_workers)
         {
@@ -127,8 +153,9 @@ namespace tp
         }
     }
 
+    template <typename TSettings>
     template <typename Handler>
-    inline void ThreadPool::post(Handler&& handler)
+    inline void ThreadPool<TSettings>::post(Handler&& handler)
     {
         if(!getWorker().post(std::forward<Handler>(handler)))
         {
@@ -136,10 +163,14 @@ namespace tp
         }
     }
 
+    template <typename TSettings>
     template <typename Handler, typename R>
-    auto ThreadPool::process(Handler&& handler)
+    auto ThreadPool<TSettings>::process(Handler&& handler)
     {
-        packaged_task_type<R> task([handler = std::move(handler)]()
+        using packaged_task_type =
+            typename TSettings::template packaged_task_type<R>;
+
+        packaged_task_type task([handler = std::move(handler)]()
             {
                 return handler();
             });
@@ -154,8 +185,8 @@ namespace tp
         return result;
     }
 
-
-    inline Worker& ThreadPool::getWorker()
+    template <typename TSettings>
+    inline Worker& ThreadPool<TSettings>::getWorker()
     {
         size_t id = Worker::getWorkerIdForCurrentThread();
 
