@@ -1,6 +1,6 @@
 //#define WITHOUT_ASIO 1
 
-#include <thread_pool/thread_pool.hpp>
+#include <thread_pool.hpp>
 
 #ifndef WITHOUT_ASIO
 #include <asio_thread_pool.hpp>
