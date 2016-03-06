@@ -106,6 +106,22 @@ namespace tp
         ThreadPool(const ThreadPool&) = delete;
         ThreadPool& operator=(const ThreadPool&) = delete;
 
+    public:
+        ThreadPool(ThreadPool&& rhs)
+            : m_workers(std::move(rhs.m_workers)),
+              m_next_worker(rhs.m_next_worker.load())
+        {
+        }
+
+        ThreadPool& operator=(ThreadPool&& rhs)
+        {
+            m_workers = std::move(rhs.m_workers);
+            m_next_worker = rhs.m_next_worker.load();
+
+            return *this;
+        }
+
+    private:
         Worker& getWorker();
 
         std::vector<std::unique_ptr<Worker>> m_workers;

@@ -47,7 +47,7 @@ namespace tp
     /**
      * @brief The MPMCBoundedQueue class implements bounded
      * multi-producers/multi-consumers lock-free queue.
-     * Doesn't accept non-movabe types as T.
+     * Doesn't accept non-movable types as T.
      * Inspired by Dmitry Vyukov's mpmc queue.
      * http://www.1024cores.net/home/lock-free-algorithms/queues/bounded-mpmc-queue
      */
@@ -88,13 +88,51 @@ namespace tp
         {
             std::atomic<size_t> sequence;
             T data;
+
+            Cell() = default;
+
+            Cell(const Cell&) = delete;
+            Cell& operator=(const Cell&) = delete;
+
+            Cell(Cell&& rhs)
+                : sequence(rhs.sequence.load()), data(std::move(rhs.data))
+            {
+            }
+
+            Cell& operator=(Cell&& rhs)
+            {
+                sequence = rhs.sequence.load();
+                data = std::move(rhs.data);
+
+                return *this;
+            }
         };
 
+    public:
+        MPMCBoundedQueue(MPMCBoundedQueue&& rhs)
+            : m_buffer(std::move(rhs.m_buffer)),
+              m_buffer_mask(std::move(rhs.m_buffer_mask)),
+              m_enqueue_pos(rhs.m_enqueue_pos.load()),
+              m_dequeue_pos(rhs.m_dequeue_pos.load())
+        {
+        }
+
+        MPMCBoundedQueue& operator=(MPMCBoundedQueue&& rhs)
+        {
+            m_buffer = std::move(rhs.m_buffer);
+            m_buffer_mask = std::move(rhs.m_buffer_mask);
+            m_enqueue_pos = rhs.m_enqueue_pos.load();
+            m_dequeue_pos = rhs.m_dequeue_pos.load();
+
+            return *this;
+        }
+
+    private:
         typedef char Cacheline[64];
 
         Cacheline pad0;
         std::vector<Cell> m_buffer;
-        const size_t m_buffer_mask;
+        /* const */ size_t m_buffer_mask;
         Cacheline pad1;
         std::atomic<size_t> m_enqueue_pos;
         Cacheline pad2;
