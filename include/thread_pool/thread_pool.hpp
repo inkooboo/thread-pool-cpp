@@ -2,6 +2,7 @@
 #define THREAD_POOL_HPP
 
 #include <thread_pool/worker.hpp>
+#include <tuple>
 #include <atomic>
 #include <stdexcept>
 #include <memory>
@@ -72,6 +73,10 @@ namespace tp
          */
         ~ThreadPool();
 
+        // TODO:
+        template <typename Handler>
+        bool try_post(Handler&& handler);
+
         /**
          * @brief post Post piece of job to thread pool.
          * @param handler Handler to be called from thread pool worker. It has
@@ -84,6 +89,12 @@ namespace tp
          */
         template <typename Handler>
         void post(Handler&& handler);
+
+        // TODO:
+        template <typename Handler,
+            typename R = typename std::result_of<Handler()>::type>
+        auto try_process(Handler&& handler);
+
 
         /**
          * @brief process Post piece of job to thread pool and get future for
@@ -171,9 +182,16 @@ namespace tp
 
     template <typename TSettings>
     template <typename Handler>
+    inline bool ThreadPool<TSettings>::try_post(Handler&& handler)
+    {
+        return getWorker().post(std::forward<Handler>(handler));
+    }
+
+    template <typename TSettings>
+    template <typename Handler>
     inline void ThreadPool<TSettings>::post(Handler&& handler)
     {
-        if(!getWorker().post(std::forward<Handler>(handler)))
+        if(!try_post(std::forward<Handler>(handler)))
         {
             throw std::overflow_error("worker queue is full");
         }
@@ -181,24 +199,32 @@ namespace tp
 
     template <typename TSettings>
     template <typename Handler, typename R>
-    auto ThreadPool<TSettings>::process(Handler&& handler)
+    auto ThreadPool<TSettings>::try_process(Handler&& handler)
     {
         using packaged_task_type =
             typename TSettings::template packaged_task_type<R>;
 
-        packaged_task_type task([handler = std::move(handler)]()
+        packaged_task_type task([handler = std::move(handler)]
             {
                 return handler();
             });
 
         auto result = task.get_future();
+        return std::make_tuple(getWorker().post(task), std::move(result));
+    }
 
-        if(!getWorker().post(task))
+    template <typename TSettings>
+    template <typename Handler, typename R>
+    auto ThreadPool<TSettings>::process(Handler&& handler)
+    {
+        auto res = try_process(std::forward<Handler>(handler));
+
+        if(std::get<0>(res) == false)
         {
             throw std::overflow_error("worker queue is full");
         }
 
-        return result;
+        return std::get<1>(std::move(res));
     }
 
     template <typename TSettings>
