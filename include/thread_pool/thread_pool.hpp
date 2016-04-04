@@ -210,7 +210,7 @@ namespace tp
             });
 
         auto result = task.get_future();
-        return std::make_tuple(getWorker().post(task), std::move(result));
+        return std::make_tuple(try_post(std::move(task)), std::move(result));
     }
 
     template <typename TSettings>
