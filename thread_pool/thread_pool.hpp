@@ -48,7 +48,7 @@ public:
      * execution or exception thrown.
      */
     template <typename Handler>
-    void post(Handler &&handler);
+    bool post(Handler &&handler);
 
     /**
      * @brief process Post piece of job to thread pool and get future for this job.
@@ -106,11 +106,9 @@ inline ThreadPool::~ThreadPool()
 }
 
 template <typename Handler>
-inline void ThreadPool::post(Handler &&handler)
+inline bool ThreadPool::post(Handler &&handler)
 {
-    if (!getWorker().post(std::forward<Handler>(handler))) {
-        throw std::overflow_error("worker queue is full");
-    }
+	return getWorker().post(std::forward<Handler>(handler));
 }
 
 template <typename Handler, typename R>
@@ -122,8 +120,8 @@ typename std::future<R> ThreadPool::process(Handler &&handler)
 
     std::future<R> result = task.get_future();
 
-    if (!getWorker().post(task)) {
-        throw std::overflow_error("worker queue is full");
+    if (!post(task)) {
+		return nullptr;
     }
 
     return result;
