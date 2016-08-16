@@ -78,7 +78,7 @@ private:
 namespace detail {
     inline size_t * thread_id()
     {
-        static thread_local size_t tss_id = -1u;
+        static thread_local size_t tss_id = std::numeric_limits<int>::max();
         return &tss_id;
     }
 }
