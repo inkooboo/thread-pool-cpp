@@ -13,9 +13,11 @@
  * @brief The ThreadPoolOptions struct provides construction options for ThreadPool.
  */
 struct ThreadPoolOptions {
-    enum {AUTODETECT = 0};
-    size_t threads_count = AUTODETECT;
-    size_t worker_queue_size = 1024;
+	ThreadPoolOptions() = default;
+	ThreadPoolOptions(size_t queue_size, size_t count = 0) : threads_count(count), worker_queue_size(queue_size) {}
+	enum { AUTODETECT = 0 };
+	size_t threads_count = AUTODETECT;
+	size_t worker_queue_size = 1024;
 };
 
 /**
