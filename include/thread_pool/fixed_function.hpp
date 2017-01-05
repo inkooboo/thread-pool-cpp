@@ -17,7 +17,7 @@ namespace tp
      * Due to limitations above it is much faster on creation and copying than
      * std::function.
      */
-    template <typename SIGNATURE, size_t STORAGE_SIZE = 64>
+    template <typename SIGNATURE, size_t STORAGE_SIZE = 128>
     class FixedFunction;
 
     template <typename R, typename... ARGS, size_t STORAGE_SIZE>

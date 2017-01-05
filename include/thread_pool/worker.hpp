@@ -17,7 +17,7 @@ namespace tp
     class Worker
     {
     public:
-        using Task = FixedFunction<void(), 64>;
+        using Task = FixedFunction<void(), 128>;
 
         /**
          * @brief Worker Constructor.
