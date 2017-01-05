@@ -1,5 +1,4 @@
-#ifndef THREAD_POOL_FIXED_FUNCTION_HPP
-#define THREAD_POOL_FIXED_FUNCTION_HPP
+#pragma once
 
 #include <type_traits>
 #include <cstring>
@@ -161,5 +160,3 @@ namespace tp
         }
     };
 }
-
-#endif

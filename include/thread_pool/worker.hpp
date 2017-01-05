@@ -1,10 +1,9 @@
-#ifndef THREAD_POOL_WORKER_HPP
-#define THREAD_POOL_WORKER_HPP
+#pragma once
 
-#include <thread_pool/fixed_function.hpp>
-#include <thread_pool/mpsc_bounded_queue.hpp>
 #include <atomic>
 #include <thread>
+#include "./fixed_function.hpp"
+#include "./mpsc_bounded_queue.hpp"
 
 namespace tp
 {
@@ -18,7 +17,7 @@ namespace tp
     class Worker
     {
     public:
-        typedef FixedFunction<void(), 64> Task;
+        using Task = FixedFunction<void(), 64>;
 
         /**
          * @brief Worker Constructor.
@@ -162,5 +161,3 @@ namespace tp
             }
     }
 }
-
-#endif

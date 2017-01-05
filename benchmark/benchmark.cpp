@@ -14,8 +14,7 @@
 
 using namespace tp;
 
-using ThreadPoolStd =
-    ThreadPool<ThreadPoolSettings<PackagedTaskAdaptorStd<std::packaged_task>>>;
+using ThreadPoolStd = ThreadPool<>;
 
 static const size_t CONCURRENCY = 16;
 static const size_t REPOST_COUNT = 1000000;

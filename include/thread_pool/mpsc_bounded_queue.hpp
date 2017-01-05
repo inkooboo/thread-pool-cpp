@@ -34,8 +34,7 @@
 // should not be interpreted as representing official policies, either expressed
 // or implied, of Dmitry Vyukov.
 
-#ifndef THREAD_POOL_MPSC_QUEUE_HPP
-#define THREAD_POOL_MPSC_QUEUE_HPP
+#pragma once
 
 #include <atomic>
 #include <type_traits>
@@ -232,5 +231,3 @@ namespace tp
         return true;
     }
 }
-
-#endif
