@@ -1,4 +1,6 @@
-#include <worker.hpp>
+#include <thread_pool/worker.hpp>
+
+using namespace tp;
 
 size_t getWorkerIdForCurrentThread()
 {

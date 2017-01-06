@@ -1,8 +1,10 @@
 #tests
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories("${THREAD_POOL_CPP_INC_DIR}")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_executable(fixed_function_test fixed_function.t.cpp)
+
 target_link_libraries(fixed_function_test)
 add_custom_command(
     TARGET fixed_function_test
@@ -17,4 +19,3 @@ add_custom_command(
     POST_BUILD
     COMMAND ./thread_pool_test
 )
-

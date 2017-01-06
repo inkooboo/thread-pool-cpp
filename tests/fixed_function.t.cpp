@@ -1,10 +1,12 @@
-#include <fixed_function.hpp>
+#include <thread_pool/fixed_function.hpp>
 #include <test.hpp>
 
 #include <string>
 #include <cassert>
 #include <type_traits>
 #include <functional>
+
+using namespace tp;
 
 int test_free_func(int i)
 {
