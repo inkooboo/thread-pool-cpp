@@ -1,10 +1,4 @@
-//#define WITHOUT_ASIO 1
-
-#include <thread_pool.hpp>
-
-#ifndef WITHOUT_ASIO
-#include <asio_thread_pool.hpp>
-#endif
+#include <thread_pool/thread_pool.hpp>
 
 #include <iostream>
 #include <chrono>
@@ -88,9 +82,6 @@ struct RepostJob
     // Heavy heavy;
 
     ThreadPoolStd* thread_pool;
-#ifndef WITHOUT_ASIO
-    AsioThreadPool* asio_thread_pool;
-#endif
 
     volatile size_t counter;
     long long int begin_count;
@@ -98,40 +89,18 @@ struct RepostJob
 
     RepostJob(ThreadPoolStd* thread_pool, std::promise<void>* waiter)
         : thread_pool(thread_pool)
-#ifndef WITHOUT_ASIO
-          ,
-          asio_thread_pool(0)
-#endif
-          ,
-          counter(0), waiter(waiter)
+        , counter(0)
+        , waiter(waiter)
     {
         begin_count = std::chrono::high_resolution_clock::now()
                           .time_since_epoch()
                           .count();
     }
-
-#ifndef WITHOUT_ASIO
-    RepostJob(AsioThreadPool* asio_thread_pool, std::promise<void>* waiter)
-        : thread_pool(0), asio_thread_pool(asio_thread_pool), counter(0),
-          waiter(waiter)
-    {
-        begin_count = std::chrono::high_resolution_clock::now()
-                          .time_since_epoch()
-                          .count();
-    }
-#endif
 
     void operator()()
     {
         if(counter++ < REPOST_COUNT)
         {
-#ifndef WITHOUT_ASIO
-            if(asio_thread_pool)
-            {
-                asio_thread_pool->post(*this);
-                return;
-            }
-#endif
             if(thread_pool)
             {
                 thread_pool->post(*this);
@@ -170,31 +139,6 @@ int main(int, const char* [])
             waiter.get_future().wait();
         }
     }
-
-#ifndef WITHOUT_ASIO
-    {
-        std::cout << "***asio thread pool***" << std::endl;
-
-        size_t workers_count = std::thread::hardware_concurrency();
-        if(0 == workers_count)
-        {
-            workers_count = 1;
-        }
-
-        AsioThreadPool asio_thread_pool(workers_count);
-
-        std::promise<void> waiters[CONCURRENCY];
-        for(auto& waiter : waiters)
-        {
-            asio_thread_pool.post(RepostJob(&asio_thread_pool, &waiter));
-        }
-
-        for(auto& waiter : waiters)
-        {
-            waiter.get_future().wait();
-        }
-    }
-#endif
 
     return 0;
 }
