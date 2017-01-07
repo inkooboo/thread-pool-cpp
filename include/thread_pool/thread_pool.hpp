@@ -10,6 +10,8 @@
 #include <future>
 #include "./worker.hpp"
 
+#define _tp_unused(x) ((void)(x))
+
 namespace tp
 {
     /**
@@ -175,6 +177,7 @@ namespace tp
     {
         const auto ok = try_post(std::forward<Handler>(handler));
         assert(ok);
+        _tp_unused(ok);
     }
 
     template <size_t TASK_SIZE>
@@ -184,8 +187,7 @@ namespace tp
 
         if(id > m_workers.size())
         {
-            id = m_next_worker.fetch_add(1, std::memory_order_relaxed) %
-                 m_workers.size();
+            id = m_next_worker.fetch_add(1, std::memory_order_relaxed) % m_workers.size();
         }
 
         return *m_workers[id];
