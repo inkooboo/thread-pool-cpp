@@ -1,0 +1,124 @@
+S# Lineage: ruslo/hunter test scripts
+# test
+
+# OSX/Linux (https://github.com/travis-ci-tester/toolchain-table)
+
+language:
+  - cpp
+
+# Container-based infrastructure (Linux)
+# * https://docs.travis-ci.com/user/migrating-from-legacy/#How-can-I-use-container-based-infrastructure%3F
+sudo:
+  - false
+
+# Install packages differs for container-based infrastructure
+# * https://docs.travis-ci.com/user/migrating-from-legacy/#How-do-I-install-APT-sources-and-packages%3F
+# * http://stackoverflow.com/a/30925448/2288008
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - python3
+
+      # python3-pip package is not available, use 'easy_install3':
+      # * https://github.com/travis-ci/apt-package-whitelist/issues/768
+      - python3-setuptools # easy_install3
+
+      # https://github.com/travis-ci-tester/travis-test-clang-cxx-11
+      - libstdc++-4.8-dev
+
+      # https://github.com/travis-ci-tester/travis-test-gcc-cxx-11
+      - g++-4.8
+
+      # For Qt
+      - libegl1-mesa-dev
+
+      # Packages for Android development: http://superuser.com/a/360398/252568
+      - libncurses5:i386
+      - libstdc++6:i386
+      - zlib1g:i386
+
+matrix:
+  include:
+    # Linux {
+    - os: linux
+      env: CONFIG=Release TOOLCHAIN=gcc-4-8-pic-hid-sections HAS_CPP14=OFF
+    - os: linux
+      env: CONFIG=Debug TOOLCHAIN=gcc-4-8-pic-hid-sections HAS_CPP14=OFF
+    - os: linux
+      env: CONFIG=Release TOOLCHAIN=android-ndk-r10e-api-19-armeabi-v7a-neon-hid-sections HAS_CPP14=OFF
+    - os: linux
+      env: CONFIG=Debug TOOLCHAIN=android-ndk-r10e-api-19-armeabi-v7a-neon-hid-sections HAS_CPP14=OFF
+    # }
+
+    # OSX {
+    - os: osx
+      env: CONFIG=Release TOOLCHAIN=osx-10-11-hid-sections HAS_CPP14=OFF
+    - os: osx
+      env: CONFIG=Debug TOOLCHAIN=osx-10-11-hid-sections HAS_CPP14=OFF
+    - os: osx
+      env: CONFIG=Release TOOLCHAIN=ios-nocodesign-9-3-device-hid-sections HAS_CPP14=OFF
+    - os: osx
+      env: CONFIG=Debug TOOLCHAIN=ios-nocodesign-9-3-device-hid-sections HAS_CPP14=OFF
+    - os: osx
+      osx_image: xcode8.1
+      env: CONFIG=Release TOOLCHAIN=osx-10-12-sanitize-address-hid-sections HAS_CPP14=OFF
+    - os: osx
+      osx_image: xcode8.1
+      env: CONFIG=Debug TOOLCHAIN=osx-10-12-sanitize-address-hid-sections HAS_CPP14=OFF
+    - os: osx
+      env: CONFIG=Release TOOLCHAIN=android-ndk-r10e-api-19-armeabi-v7a-neon-hid-sections HAS_CPP14=OFF
+    - os: osx
+      env: CONFIG=Debug TOOLCHAIN=android-ndk-r10e-api-19-armeabi-v7a-neon-hid-sections HAS_CPP14=OFF
+    # }
+
+# disable the default submodule logic to support local modification of .gitmodules paths
+git:
+  submodules: false
+
+install:
+  # Info about OS
+  - uname -a
+
+  # Install Python 3
+  - if [[ "`uname`" == "Darwin" ]]; then travis_retry brew install python3; fi
+
+  # Install Python package 'requests'
+  # 'easy_install3' is not installed by 'brew install python3' on OS X 10.9 Maverick
+  - if [[ "`uname`" == "Darwin" ]]; then pip3 install requests; fi
+  - if [[ "`uname`" == "Linux" ]]; then travis_retry easy_install3 --user requests==2.10.0; fi
+
+  # Install latest Polly toolchains and scripts
+  - wget https://github.com/ruslo/polly/archive/master.zip
+  - unzip master.zip
+  - POLLY_ROOT="`pwd`/polly-master"
+  - export PATH="${POLLY_ROOT}/bin:${PATH}"  
+
+  # Install dependencies (CMake, Android NDK)
+  - install-ci-dependencies.py
+
+  # Tune locations
+  - export PATH="`pwd`/_ci/cmake/bin:${PATH}"
+
+  # Installed if toolchain is Android (otherwise directory doesn't exist)
+  - export ANDROID_NDK_r10e="`pwd`/_ci/android-ndk-r10e"
+
+script:
+
+    # '--ios-{multiarch,combined}' do nothing for non-iOS builds
+    - >
+      polly.py
+      --toolchain ${TOOLCHAIN}
+      --config ${CONFIG}
+      --verbose
+      --ios-multiarch --ios-combined
+      --fwd
+      THREAD_POOL_CPP_BUILD_TESTS=ON
+      THREAD_POOL_CPP_HAS_CPP14=${HAS_CPP14}
+      --test
+      --jobs 2
+
+branches:
+  except:
+    - /^pr\..*/

@@ -124,7 +124,18 @@ namespace tp
         }
 
     private:
-        auto & getWorker();
+
+        FixedWorker & getWorker()
+        {
+            auto id = FixedWorker::getWorkerIdForCurrentThread();
+
+            if(id > m_workers.size())
+            {
+                id = m_next_worker.fetch_add(1, std::memory_order_relaxed) % m_workers.size();
+            }
+
+            return *m_workers[id];
+        }
 
         std::vector<std::unique_ptr<FixedWorker>> m_workers;
         std::atomic<size_t> m_next_worker;
@@ -185,18 +196,5 @@ namespace tp
         const auto ok = try_post(std::forward<Handler>(handler));
         assert(ok);
         ((void)ok);
-    }
-
-    template <typename TSettings>
-    inline auto & ThreadPool<TSettings>::getWorker()
-    {
-        auto id = FixedWorker::getWorkerIdForCurrentThread();
-
-        if(id > m_workers.size())
-        {
-            id = m_next_worker.fetch_add(1, std::memory_order_relaxed) % m_workers.size();
-        }
-
-        return *m_workers[id];
     }
 }

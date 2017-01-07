@@ -4,8 +4,6 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/Modules")
 
 project(thread-pool-cpp VERSION 1.1.0)
 
-add_definitions(-std=c++14 -Wall -Werror -O3)
-
 option(THREAD_POOL_CPP_BUILD_TESTS "Build tests." OFF)
 option(THREAD_POOL_CPP_BUILD_BENCHMARKS "Build benchmarks." OFF)
 
@@ -34,6 +32,22 @@ endif()
 
 # http://stackoverflow.com/a/11583676
 add_library(thread-pool-cpp INTERFACE)
+
+option(THREAD_POOL_CPP_HAS_CPP14 "Has true C++14 support." ON)
+
+if(NOT MSVC)
+  if(THREAD_POOL_CPP_HAS_CPP14)
+    target_compile_definitions(thread-pool-cpp INTERFACE -std=c++14 -Wall -Werror -O3)
+  else()
+    target_compile_definitions(thread-pool-cpp INTERFACE -std=c++1y -Wall -Werror -O3)
+  endif()
+else()
+  if(THREAD_POOL_CPP_HAS_CPP14)
+    target_compile_definitions(thread-pool-cpp INTERFACE /std:c++14)
+  else()
+    target_compile_definitions(thread-pool-cpp INTERFACE /std:c++1y)
+  endif()
+endif()
 
 if(THREAD_POOL_CPP_BUILD_TESTS)
   add_subdirectory(tests)

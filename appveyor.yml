@@ -1,0 +1,63 @@
+# Lineage: ruslo/hunter tests scripts
+# test
+
+os: Visual Studio 2015
+
+environment:
+
+  matrix:
+
+    - TOOLCHAIN: "vs-14-2015-sdk-8-1"
+      CONFIG: Release
+      HAS_CPP14: OFF
+
+    - TOOLCHAIN: "vs-14-2015-sdk-8-1"
+      CONFIG: Debug
+      HAS_CPP14: OFF      
+
+    - TOOLCHAIN: "vs-14-2015-win64-sdk-8-1"
+      CONFIG: Release
+      HAS_CPP14: OFF      
+
+    - TOOLCHAIN: "vs-14-2015-win64-sdk-8-1"
+      CONFIG: Debug
+      HAS_CPP14: OFF            
+
+install:
+  # Python 3
+  - cmd: set PATH=C:\Python34-x64;C:\Python34-x64\Scripts;%PATH%
+
+  # Install Python package 'requests'
+  - cmd: pip install requests
+
+  # Install latest Polly toolchains and scripts
+  - cmd: appveyor DownloadFile https://github.com/ruslo/polly/archive/master.zip
+  - cmd: 7z x master.zip
+  - cmd: set POLLY_ROOT=%cd%\polly-master
+
+  # Install dependencies (CMake, Ninja)
+  - cmd: python %POLLY_ROOT%\bin\install-ci-dependencies.py
+
+  # Tune locations
+  - cmd: set PATH=%cd%\_ci\cmake\bin;%PATH%
+  - cmd: set PATH=%cd%\_ci\ninja;%PATH%
+
+  # Remove entry with sh.exe from PATH to fix error with MinGW toolchain
+  # (For MinGW make to work correctly sh.exe must NOT be in your path)
+  # * http://stackoverflow.com/a/3870338/2288008
+  - cmd: set PATH=%PATH:C:\Program Files\Git\usr\bin;=%
+
+  # Use MinGW from Qt tools because version is higher
+  # * http://www.appveyor.com/docs/installed-software#qt
+  - cmd: set MINGW_PATH=C:\Qt\Tools\mingw492_32\bin
+
+  # MSYS2 location
+  - cmd: set MSYS_PATH=C:\msys64\usr\bin
+
+build_script:
+
+  - cmd: bin\build-appveyor.cmd "%CONFIG%" "%TOOLCHAIN%" "%HAS_CPP14%"
+
+branches:
+  except:
+    - /^pr\..*/

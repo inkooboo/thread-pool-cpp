@@ -118,7 +118,7 @@ namespace tp
     {
         inline std::size_t* thread_id()
         {
-            static thread_local std::size_t tss_id = -1u;
+            static ATTRIBUTE_TLS std::size_t tss_id = -1u;
             return &tss_id;
         }
     }
