@@ -107,7 +107,7 @@ int main()
 
             cnt c2;
             c2.payload = "qwe";
-            f4 = std::move(FixedFunction<std::string()>(c2));
+            f4 = FixedFunction<std::string()>(c2);
             ASSERT(std::string("qwe") == f4());
         }
 
