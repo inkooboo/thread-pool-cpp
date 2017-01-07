@@ -9,6 +9,10 @@ add_definitions(-std=c++14 -Wall -Werror -O3)
 option(THREAD_POOL_CPP_BUILD_TESTS "Build tests." OFF)
 option(THREAD_POOL_CPP_BUILD_BENCHMARKS "Build benchmarks." OFF)
 
+if(THREAD_POOL_CPP_BUILD_TESTS)
+  include(CTest)
+endif()
+
 # Variable used in: benchmark, tests
 set(THREAD_POOL_CPP_INC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include/")
 include_directories("${THREAD_POOL_CPP_INC_DIR}")
