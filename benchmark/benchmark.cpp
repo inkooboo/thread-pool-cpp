@@ -10,8 +10,8 @@ using namespace tp;
 
 using ThreadPoolStd = ThreadPool<>;
 
-static const size_t CONCURRENCY = 16;
-static const size_t REPOST_COUNT = 1000000;
+static const std::size_t CONCURRENCY = 16;
+static const std::size_t REPOST_COUNT = 1000000;
 
 struct Heavy
 {
@@ -83,7 +83,7 @@ struct RepostJob
 
     ThreadPoolStd* thread_pool;
 
-    volatile size_t counter;
+    volatile std::size_t counter;
     long long int begin_count;
     std::promise<void>* waiter;
 

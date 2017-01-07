@@ -10,8 +10,6 @@
 #include <future>
 #include "./worker.hpp"
 
-#define _tp_unused(x) ((void)(x))
-
 namespace tp
 {
     /**
@@ -126,7 +124,7 @@ namespace tp
         }
 
     private:
-        FixedWorker& getWorker();
+        auto & getWorker();
 
         std::vector<std::unique_ptr<FixedWorker>> m_workers;
         std::atomic<size_t> m_next_worker;
@@ -186,11 +184,11 @@ namespace tp
     {
         const auto ok = try_post(std::forward<Handler>(handler));
         assert(ok);
-        _tp_unused(ok);
+        ((void)ok);
     }
 
     template <typename TSettings>
-    inline typename ThreadPool<TSettings>::FixedWorker& ThreadPool<TSettings>::getWorker()
+    inline auto & ThreadPool<TSettings>::getWorker()
     {
         auto id = FixedWorker::getWorkerIdForCurrentThread();
 

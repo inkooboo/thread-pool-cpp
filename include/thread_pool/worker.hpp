@@ -30,7 +30,7 @@ namespace tp
      * then spins with one millisecond delay.
      */
 
-    template <size_t TASK_SIZE=128>
+    template <std::size_t TASK_SIZE=128>
     class Worker
     {
     public:
@@ -40,14 +40,14 @@ namespace tp
          * @brief Worker Constructor.
          * @param queue_size Length of undelaying task queue.
          */
-        explicit Worker(size_t queue_size);
+        explicit Worker(std::size_t queue_size);
 
         /**
          * @brief start Create the executing thread and start tasks execution.
          * @param id Worker ID.
          * @param steal_donor Sibling worker to steal task from it.
          */
-        void start(size_t id, Worker* steal_donor);
+        void start(std::size_t id, Worker* steal_donor);
 
         /**
          * @brief stop Stop all worker's thread and stealing activity.
@@ -75,7 +75,7 @@ namespace tp
          * current thread if exists.
          * @return Worker ID.
          */
-        static size_t getWorkerIdForCurrentThread();
+        static std::size_t getWorkerIdForCurrentThread();
 
     private:
         Worker(const Worker<TASK_SIZE>&) = delete;
@@ -104,7 +104,7 @@ namespace tp
          * @param id Worker ID to be associated with this thread.
          * @param steal_donor Sibling worker to steal task from it.
          */
-        void threadFunc(size_t id, Worker<TASK_SIZE>* steal_donor);
+        void threadFunc(std::size_t id, Worker<TASK_SIZE>* steal_donor);
 
         MPMCBoundedQueue<Task> m_queue;
         std::atomic<bool> m_running_flag;
@@ -116,53 +116,53 @@ namespace tp
 
     namespace detail
     {
-        inline size_t* thread_id()
+        inline std::size_t* thread_id()
         {
-            static thread_local size_t tss_id = -1u;
+            static thread_local std::size_t tss_id = -1u;
             return &tss_id;
         }
     }
 
-    template <size_t TASK_SIZE>
-    inline Worker<TASK_SIZE>::Worker(size_t queue_size)
+    template <std::size_t TASK_SIZE>
+    inline Worker<TASK_SIZE>::Worker(std::size_t queue_size)
         : m_queue(queue_size), m_running_flag(true)
     {
     }
 
-    template <size_t TASK_SIZE>    
+    template <std::size_t TASK_SIZE>    
     inline void Worker<TASK_SIZE>::stop()
     {
         m_running_flag.store(false, std::memory_order_relaxed);
         m_thread.join();
     }
 
-    template <size_t TASK_SIZE>
-    inline void Worker<TASK_SIZE>::start(size_t id, Worker* steal_donor)
+    template <std::size_t TASK_SIZE>
+    inline void Worker<TASK_SIZE>::start(std::size_t id, Worker* steal_donor)
     {
         m_thread = std::thread(&Worker<TASK_SIZE>::threadFunc, this, id, steal_donor);
     }
 
-    template <size_t TASK_SIZE>
-    inline size_t Worker<TASK_SIZE>::getWorkerIdForCurrentThread()
+    template <std::size_t TASK_SIZE>
+    inline std::size_t Worker<TASK_SIZE>::getWorkerIdForCurrentThread()
     {
         return *detail::thread_id();
     }
 
-    template <size_t TASK_SIZE>
+    template <std::size_t TASK_SIZE>
     template <typename Handler>
     inline bool Worker<TASK_SIZE>::post(Handler&& handler)
     {
         return m_queue.push(std::forward<Handler>(handler));
     }
     
-    template <size_t TASK_SIZE>    
+    template <std::size_t TASK_SIZE>    
     inline bool Worker<TASK_SIZE>::steal(Task& task)
     {
         return m_queue.pop(task);
     }
 
-    template <size_t TASK_SIZE>    
-    inline void Worker<TASK_SIZE>::threadFunc(size_t id, Worker* steal_donor)
+    template <std::size_t TASK_SIZE>    
+    inline void Worker<TASK_SIZE>::threadFunc(std::size_t id, Worker* steal_donor)
     {
         *detail::thread_id() = id;
 
