@@ -9,5 +9,5 @@ size_t getWorkerIdForCurrentThread()
 
 size_t getWorkerIdForCurrentThread2()
 {
-    return Worker::getWorkerIdForCurrentThread();
+    return Worker<>::getWorkerIdForCurrentThread();
 }
