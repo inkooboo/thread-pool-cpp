@@ -7,6 +7,7 @@
 #include <vector>
 #include <type_traits>
 #include <cassert>
+#include <future>
 #include "./worker.hpp"
 
 namespace tp
@@ -34,16 +35,17 @@ namespace tp
      * startegies.
      * It implements cooperative scheduling strategy for tasks.
      */
-    template <typename TSettings = void>
+    template <size_t TASK_SIZE=128>
     class ThreadPool
     {
     public:
+
+         using FixedWorker = Worker<TASK_SIZE>;
         /**
          * @brief ThreadPool Construct and start new thread pool.
          * @param options Creation options.
          */
-        explicit ThreadPool(
-            const ThreadPoolOptions& options = ThreadPoolOptions());
+        explicit ThreadPool(const ThreadPoolOptions& options = ThreadPoolOptions());
 
         /**
          * @brief ~ThreadPool Stop all workers and destroy thread pool.
@@ -69,7 +71,30 @@ namespace tp
         template <typename Handler>
         void post(Handler&& handler);
 
+        /**
+         * @brief process Post piece of job to thread pool and get future for this job.
+         * @param handler Handler to be called from thread pool worker. It has to be callable as 'handler()'.
+         * @return Future which hold handler result or exception thrown.
+         * @throws std::overflow_error if worker's queue is full.
+         * @note This method of posting job to thread pool is much slower than 'post()' due to std::future and
+         * std::packaged_task construction overhead.
+         */
+        template <typename Handler, typename R = typename std::result_of<Handler()>::type>
+        typename std::future<R> process(Handler &&handler)
+        {
+            std::packaged_task<R()> task([handler = std::move(handler)] () {
+                    return handler();
+                });
 
+            std::future<R> result = task.get_future();
+
+            if (!getWorker().post(task)) {
+                throw std::overflow_error("worker queue is full");
+            }
+
+            return result;
+        }
+        
     private:
         ThreadPool(const ThreadPool&) = delete;
         ThreadPool& operator=(const ThreadPool&) = delete;
@@ -90,17 +115,17 @@ namespace tp
         }
 
     private:
-        Worker& getWorker();
+        FixedWorker& getWorker();
 
-        std::vector<std::unique_ptr<Worker>> m_workers;
+        std::vector<std::unique_ptr<FixedWorker>> m_workers;
         std::atomic<size_t> m_next_worker;
     };
 
 
     /// Implementation
 
-    template <typename TSettings>
-    inline ThreadPool<TSettings>::ThreadPool(const ThreadPoolOptions& options)
+    template <size_t TASK_SIZE>
+    inline ThreadPool<TASK_SIZE>::ThreadPool(const ThreadPoolOptions& options)
         : m_next_worker(0)
     {
         size_t workers_count = options.threads_count;
@@ -118,18 +143,18 @@ namespace tp
         m_workers.resize(workers_count);
         for(auto& worker_ptr : m_workers)
         {
-            worker_ptr.reset(new Worker(options.worker_queue_size));
+            worker_ptr.reset(new FixedWorker(options.worker_queue_size));
         }
 
         for(size_t i = 0; i < m_workers.size(); ++i)
         {
-            Worker* steal_donor = m_workers[(i + 1) % m_workers.size()].get();
+            FixedWorker* steal_donor = m_workers[(i + 1) % m_workers.size()].get();
             m_workers[i]->start(i, steal_donor);
         }
     }
 
-    template <typename TSettings>
-    inline ThreadPool<TSettings>::~ThreadPool()
+    template <size_t TASK_SIZE>
+    inline ThreadPool<TASK_SIZE>::~ThreadPool()
     {
         for(auto& worker_ptr : m_workers)
         {
@@ -137,25 +162,25 @@ namespace tp
         }
     }
 
-    template <typename TSettings>
+    template <size_t TASK_SIZE>
     template <typename Handler>
-    inline bool ThreadPool<TSettings>::try_post(Handler&& handler)
+    inline bool ThreadPool<TASK_SIZE>::try_post(Handler&& handler)
     {
         return getWorker().post(std::forward<Handler>(handler));
     }
 
-    template <typename TSettings>
+    template <size_t TASK_SIZE>
     template <typename Handler>
-    inline void ThreadPool<TSettings>::post(Handler&& handler)
+    inline void ThreadPool<TASK_SIZE>::post(Handler&& handler)
     {
         const auto ok = try_post(std::forward<Handler>(handler));
         assert(ok);
     }
 
-    template <typename TSettings>
-    inline Worker& ThreadPool<TSettings>::getWorker()
+    template <size_t TASK_SIZE>
+    inline typename ThreadPool<TASK_SIZE>::FixedWorker& ThreadPool<TASK_SIZE>::getWorker()
     {
-        auto id = Worker::getWorkerIdForCurrentThread();
+        auto id = FixedWorker::getWorkerIdForCurrentThread();
 
         if(id > m_workers.size())
         {
