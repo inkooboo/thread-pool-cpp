@@ -7,6 +7,7 @@
 #include <vector>
 #include <type_traits>
 #include <cassert>
+#include <future>
 #include "./worker.hpp"
 
 namespace tp
@@ -27,6 +28,15 @@ namespace tp
     };
 
     /**
+     * @brief The ThreadPoolSettings struct provides compile-time options for
+     * ThreadPool.
+     */    
+    template <size_t TASK_SIZE=128> struct ThreadPoolSettings
+    {
+        static constexpr auto task_size = TASK_SIZE;
+    };
+    
+    /**
      * @brief The ThreadPool class implements thread pool pattern.
      * It is highly scalable and fast.
      * It is header only.
@@ -34,16 +44,17 @@ namespace tp
      * startegies.
      * It implements cooperative scheduling strategy for tasks.
      */
-    template <typename TSettings = void>
+    template <typename TSettings=ThreadPoolSettings<128>>
     class ThreadPool
     {
     public:
+
+        using FixedWorker = Worker<TSettings::task_size>;
         /**
          * @brief ThreadPool Construct and start new thread pool.
          * @param options Creation options.
          */
-        explicit ThreadPool(
-            const ThreadPoolOptions& options = ThreadPoolOptions());
+        explicit ThreadPool(const ThreadPoolOptions& options = ThreadPoolOptions());
 
         /**
          * @brief ~ThreadPool Stop all workers and destroy thread pool.
@@ -69,7 +80,30 @@ namespace tp
         template <typename Handler>
         void post(Handler&& handler);
 
+        /**
+         * @brief process Post piece of job to thread pool and get future for this job.
+         * @param handler Handler to be called from thread pool worker. It has to be callable as 'handler()'.
+         * @return Future which hold handler result or exception thrown.
+         * @throws std::overflow_error if worker's queue is full.
+         * @note This method of posting job to thread pool is much slower than 'post()' due to std::future and
+         * std::packaged_task construction overhead.
+         */
+        template <typename Handler, typename R = typename std::result_of<Handler()>::type>
+        typename std::future<R> process(Handler &&handler)
+        {
+            std::packaged_task<R()> task([handler = std::move(handler)] () {
+                    return handler();
+                });
 
+            std::future<R> result = task.get_future();
+
+            if (!getWorker().post(task)) {
+                throw std::overflow_error("worker queue is full");
+            }
+
+            return result;
+        }
+        
     private:
         ThreadPool(const ThreadPool&) = delete;
         ThreadPool& operator=(const ThreadPool&) = delete;
@@ -90,9 +124,20 @@ namespace tp
         }
 
     private:
-        Worker& getWorker();
 
-        std::vector<std::unique_ptr<Worker>> m_workers;
+        FixedWorker & getWorker()
+        {
+            auto id = FixedWorker::getWorkerIdForCurrentThread();
+
+            if(id > m_workers.size())
+            {
+                id = m_next_worker.fetch_add(1, std::memory_order_relaxed) % m_workers.size();
+            }
+
+            return *m_workers[id];
+        }
+
+        std::vector<std::unique_ptr<FixedWorker>> m_workers;
         std::atomic<size_t> m_next_worker;
     };
 
@@ -118,12 +163,12 @@ namespace tp
         m_workers.resize(workers_count);
         for(auto& worker_ptr : m_workers)
         {
-            worker_ptr.reset(new Worker(options.worker_queue_size));
+            worker_ptr.reset(new FixedWorker(options.worker_queue_size));
         }
 
         for(size_t i = 0; i < m_workers.size(); ++i)
         {
-            Worker* steal_donor = m_workers[(i + 1) % m_workers.size()].get();
+            FixedWorker* steal_donor = m_workers[(i + 1) % m_workers.size()].get();
             m_workers[i]->start(i, steal_donor);
         }
     }
@@ -150,19 +195,6 @@ namespace tp
     {
         const auto ok = try_post(std::forward<Handler>(handler));
         assert(ok);
-    }
-
-    template <typename TSettings>
-    inline Worker& ThreadPool<TSettings>::getWorker()
-    {
-        auto id = Worker::getWorkerIdForCurrentThread();
-
-        if(id > m_workers.size())
-        {
-            id = m_next_worker.fetch_add(1, std::memory_order_relaxed) %
-                 m_workers.size();
-        }
-
-        return *m_workers[id];
+        ((void)ok);
     }
 }

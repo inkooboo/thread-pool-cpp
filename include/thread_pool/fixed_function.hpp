@@ -17,10 +17,10 @@ namespace tp
      * Due to limitations above it is much faster on creation and copying than
      * std::function.
      */
-    template <typename SIGNATURE, size_t STORAGE_SIZE = 128>
+    template <typename SIGNATURE, std::size_t STORAGE_SIZE = 128>
     class FixedFunction;
 
-    template <typename R, typename... ARGS, size_t STORAGE_SIZE>
+    template <typename R, typename... ARGS, std::size_t STORAGE_SIZE>
     class FixedFunction<R(ARGS...), STORAGE_SIZE>
     {
 
@@ -119,7 +119,7 @@ namespace tp
 
         union
         {
-            typename std::aligned_storage<STORAGE_SIZE, sizeof(size_t)>::type
+            typename std::aligned_storage<STORAGE_SIZE, sizeof(std::size_t)>::type
                 m_storage;
             func_ptr_type m_function_ptr;
         };
