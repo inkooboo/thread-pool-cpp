@@ -93,38 +93,13 @@ namespace tp
             Cell(const Cell&) = delete;
             Cell& operator=(const Cell&) = delete;
 
-            Cell(Cell&& rhs)
-                : sequence(rhs.sequence.load()), data(std::move(rhs.data))
-            {
-            }
-
-            Cell& operator=(Cell&& rhs)
-            {
-                sequence = rhs.sequence.load();
-                data = std::move(rhs.data);
-
-                return *this;
-            }
+            Cell(Cell&&) = default;
+            Cell& operator=(Cell&&) = default;
         };
 
     public:
-        MPMCBoundedQueue(MPMCBoundedQueue&& rhs)
-            : m_buffer(std::move(rhs.m_buffer)),
-              m_buffer_mask(std::move(rhs.m_buffer_mask)),
-              m_enqueue_pos(rhs.m_enqueue_pos.load()),
-              m_dequeue_pos(rhs.m_dequeue_pos.load())
-        {
-        }
-
-        MPMCBoundedQueue& operator=(MPMCBoundedQueue&& rhs)
-        {
-            m_buffer = std::move(rhs.m_buffer);
-            m_buffer_mask = std::move(rhs.m_buffer_mask);
-            m_enqueue_pos = rhs.m_enqueue_pos.load();
-            m_dequeue_pos = rhs.m_dequeue_pos.load();
-
-            return *this;
-        }
+        MPMCBoundedQueue(MPMCBoundedQueue&&) = default;
+        MPMCBoundedQueue& operator=(MPMCBoundedQueue&&) = default;
 
     private:
         typedef char Cacheline[64];
