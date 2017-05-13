@@ -65,21 +65,8 @@ namespace tp
         Worker& operator=(const Worker&) = delete;
 
     public:
-        Worker(Worker&& rhs)
-            : m_queue(std::move(rhs.m_queue)),
-              m_running_flag(rhs.m_running_flag.load()),
-              m_thread(std::move(rhs.m_thread))
-        {
-        }
-
-        Worker& operator=(Worker&& rhs)
-        {
-            m_queue = std::move(rhs.m_queue);
-            m_running_flag = rhs.m_running_flag.load();
-            m_thread = std::move(rhs.m_thread);
-
-            return *this;
-        }
+        Worker(Worker&&) = default;
+        Worker& operator=(Worker&&) = default;
 
     private:
         /**
