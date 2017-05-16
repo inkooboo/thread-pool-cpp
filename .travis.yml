@@ -1,8 +1,23 @@
-sudo: required
-before_install:
-  - sudo apt-get install cmake
-
 language: cpp
+
+os:
+ - linux
+
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - gcc-5
+    - g++-5
+    - clang
+ 
+compiler:
+  - gcc
+  - clang
+  
+install:
+- if [ "$CXX" = "g++" ]; then export CXX="g++-5" CC="gcc-5"; fi
 
 script:
   - mkdir build
