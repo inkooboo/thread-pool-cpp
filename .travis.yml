@@ -1,0 +1,11 @@
+sudo: required
+before_install:
+  - sudo apt-get install cmake
+
+language: cpp
+
+script:
+  - mkdir build
+  - cd build
+  - cmake -DCMAKE_BUILD_TYPE=Release..
+  - make
