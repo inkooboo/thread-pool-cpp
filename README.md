@@ -1,5 +1,7 @@
-thread-pool-cpp
-=================
+thread-pool-cpp 
+=================  
+[![Build Status](https://travis-ci.org/inkooboo/thread-pool-cpp.svg?branch=master)](https://travis-ci.org/inkooboo/thread-pool-cpp)
+[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
  * It is highly scalable and fast.
  * It is header only.
