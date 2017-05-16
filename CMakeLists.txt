@@ -9,7 +9,7 @@ list(APPEND CMAKE_MODULE_PATH
 add_definitions(-std=c++14 -Wall -Werror)
 if(COVERAGE)
     add_definitions(--coverage)
-if()
+endif()
 
 # Get all include files
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
