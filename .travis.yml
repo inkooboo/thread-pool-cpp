@@ -27,6 +27,7 @@ script:
   - cd ..
 
 after_success:
+  - gcov --version
   - lcov --version
   - pwd
   - mkdir coverage
