@@ -7,19 +7,21 @@ addons:
   apt:
     sources:
     - ubuntu-toolchain-r-test
+    - llvm-toolchain-precise
     packages:
-    - gcc-5
     - g++-5
-    - clang
+    - clang-3.7
  
 compiler:
   - gcc
   - clang
   
 install:
-- if [ "$CXX" = "g++" ]; then export CXX="g++-5" CC="gcc-5"; fi
+- if [ "$CXX" = "g++" ]; then export CXX="g++-5"; fi
+- if [ "$CXX" == "clang++" ]; then export CXX="clang++-3.7"; fi
 
 script:
+  - $CXX --version
   - mkdir build
   - cd build
   - cmake -DCMAKE_BUILD_TYPE=Release ..
