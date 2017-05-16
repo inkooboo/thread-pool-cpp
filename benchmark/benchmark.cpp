@@ -1,8 +1,6 @@
-//#define WITHOUT_ASIO 1
-
 #include <thread_pool.hpp>
 
-#ifndef WITHOUT_ASIO
+#ifdef WITH_ASIO
 #include <asio_thread_pool.hpp>
 #endif
 
@@ -13,8 +11,6 @@
 #include <future>
 
 using namespace tp;
-
-using ThreadPoolStd = ThreadPool<>;
 
 static const size_t CONCURRENCY = 16;
 static const size_t REPOST_COUNT = 1000000;
@@ -85,10 +81,10 @@ struct Heavy
 
 struct RepostJob
 {
-    // Heavy heavy;
+    //Heavy heavy;
 
-    ThreadPoolStd* thread_pool;
-#ifndef WITHOUT_ASIO
+    ThreadPool* thread_pool;
+#ifdef WITH_ASIO
     AsioThreadPool* asio_thread_pool;
 #endif
 
@@ -96,9 +92,9 @@ struct RepostJob
     long long int begin_count;
     std::promise<void>* waiter;
 
-    RepostJob(ThreadPoolStd* thread_pool, std::promise<void>* waiter)
+    RepostJob(ThreadPool* thread_pool, std::promise<void>* waiter)
         : thread_pool(thread_pool)
-#ifndef WITHOUT_ASIO
+#ifdef WITH_ASIO
           ,
           asio_thread_pool(0)
 #endif
@@ -110,7 +106,7 @@ struct RepostJob
                           .count();
     }
 
-#ifndef WITHOUT_ASIO
+#ifdef WITH_ASIO
     RepostJob(AsioThreadPool* asio_thread_pool, std::promise<void>* waiter)
         : thread_pool(0), asio_thread_pool(asio_thread_pool), counter(0),
           waiter(waiter)
@@ -123,9 +119,9 @@ struct RepostJob
 
     void operator()()
     {
-        if(counter++ < REPOST_COUNT)
+        if(++counter < REPOST_COUNT)
         {
-#ifndef WITHOUT_ASIO
+#ifdef WITH_ASIO
             if(asio_thread_pool)
             {
                 asio_thread_pool->post(*this);
@@ -159,7 +155,7 @@ int main(int, const char* [])
         std::cout << "***thread pool cpp***" << std::endl;
 
         std::promise<void> waiters[CONCURRENCY];
-        ThreadPoolStd thread_pool;
+        ThreadPool thread_pool;
         for(auto& waiter : waiters)
         {
             thread_pool.post(RepostJob(&thread_pool, &waiter));
@@ -171,7 +167,7 @@ int main(int, const char* [])
         }
     }
 
-#ifndef WITHOUT_ASIO
+#ifdef WITH_ASIO
     {
         std::cout << "***asio thread pool***" << std::endl;
 
