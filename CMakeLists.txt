@@ -9,6 +9,7 @@ list(APPEND CMAKE_MODULE_PATH
 add_definitions(-std=c++14 -Wall -Werror)
 if(COVERAGE)
     add_definitions(--coverage)
+    set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} --coverage")
 endif()
 
 # Get all include files
