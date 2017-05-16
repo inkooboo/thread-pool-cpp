@@ -5,8 +5,9 @@ thread-pool-cpp
 
  * It is highly scalable and fast.
  * It is header only.
+ * No external dependencies, only standard library needed.
  * It implements both work-stealing and work-distribution balancing startegies.
- * It implements cooperative scheduling strategy for tasks.
+ * It implements cooperative scheduling strategy.
 
 Example run:
 Post job to thread pool is much faster than for boost::asio based thread pool.
