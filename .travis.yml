@@ -28,15 +28,16 @@ script:
 
 after_success:
   - gcov --version
+  - gcov-5 -- version
   - lcov --version
   - pwd
   - mkdir coverage
   - cd coverage
   - cmake DCMAKE_BUILD_TYPE=Debug -DCOVERAGE=yes ..
   - make VERBOSE=1
-  - lcov --directory . --capture --output-file coverage.info
-  - lcov --remove coverage.info '/usr/*' --output-file coverage.info 
-  - lcov --list coverage.info
+  - lcov --gcov-tool gcov-5 --directory . --capture --output-file coverage.info
+  - lcov --gcov-tool gcov-5 --remove coverage.info '/usr/*' --output-file coverage.info 
+  - lcov --gcov-tool gcov-5 --list coverage.info
   - bash <(curl -s https://codecov.io/bash) || echo "Codecov did not collect coverage reports"
   - cd ..
 
