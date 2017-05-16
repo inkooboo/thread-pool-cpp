@@ -9,6 +9,7 @@ addons:
     - ubuntu-toolchain-r-test
     packages:
     - g++-5
+    - lcov
  
 compiler:
   - gcc
@@ -22,3 +23,18 @@ script:
   - cd build
   - cmake -DCMAKE_BUILD_TYPE=Release ..
   - make VERBOSE=1
+
+after_success:
+  - lcov --version
+  - mkdir coverage
+  - cd coverage
+  - cmake DCMAKE_BUILD_TYPE=Debug COVERAGE=yes ..
+  - make VERBOSE=1
+  - lcov --directory . --capture --output-file coverage.info
+  - lcov --remove coverage.info '/usr/*' --output-file coverage.info 
+  - lcov --list coverage.info
+  - bash <(curl -s https://codecov.io/bash) || echo "Codecov did not collect coverage reports"
+
+env:
+  global:
+  - LANG="en_US.UTF-8"
