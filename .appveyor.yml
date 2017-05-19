@@ -1,9 +1,11 @@
 platform: x64
 
 environment:
-  - GENERATOR: Visual Studio 15 2017 Win64
-    CXXFLAGS: /std:c++14 /permissive-
-    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+  matrix:
+    # MSVC 14.1
+    - GENERATOR: Visual Studio 15 2017 Win64
+      CXXFLAGS: /std:c++14 /permissive-
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
 
 configuration:
   - Release
