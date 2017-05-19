@@ -19,7 +19,6 @@ install:
 
 script:
   - $CXX --version
-  - pwd
   - mkdir build
   - cd build
   - cmake -DCMAKE_BUILD_TYPE=Release ..
@@ -27,10 +26,6 @@ script:
   - cd ..
 
 after_success:
-  - gcov --version
-  - gcov-5 --version
-  - lcov --version
-  - pwd
   - mkdir coverage
   - cd coverage
   - cmake DCMAKE_BUILD_TYPE=Debug -DCOVERAGE=yes ..
