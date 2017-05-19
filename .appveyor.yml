@@ -1,0 +1,15 @@
+platform: x64
+
+environment:
+  - GENERATOR: Visual Studio 15 2017 Win64
+    CXXFLAGS: /std:c++14 /permissive-
+    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+
+configuration:
+  - Release
+
+build_script:
+  - mkdir build
+  - cd build
+  - cmake -G "$env:GENERATOR" ..
+  - cmake --build . --config %CONFIGURATION%
