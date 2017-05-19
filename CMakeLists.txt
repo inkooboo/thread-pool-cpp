@@ -7,6 +7,10 @@ list(APPEND CMAKE_MODULE_PATH
        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
 add_definitions(-std=c++14 -Wall -Werror)
+if(CMAKE_COMPILER_IS_GNUCXX)
+    add_definitions(-Werror)
+endif()
+
 if(COVERAGE)
     add_definitions(--coverage)
     set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} --coverage")
