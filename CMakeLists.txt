@@ -7,7 +7,9 @@ list(APPEND CMAKE_MODULE_PATH
        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
 add_definitions(-std=c++14 -Wall -Werror)
-if(CMAKE_COMPILER_IS_GNUCXX)
+if(MSVC)
+    add_definitions(-WX)
+else()
     add_definitions(-Werror)
 endif()
 
