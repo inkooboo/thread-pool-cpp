@@ -8,7 +8,6 @@ list(APPEND CMAKE_MODULE_PATH
 
 add_definitions(-std=c++14 -Wall)
 if(MSVC)
-    add_definitions(-WX)
 else()
     add_definitions(-Werror)
 endif()
