@@ -1,8 +1,16 @@
 dist: trusty
 sudo: false
+
 language: cpp
+
 os: linux
-compiler: gcc
+
+compiler: g++
+
+addons:
+  apt:
+    packages:
+      - lcov
 
 script:
   - mkdir build
