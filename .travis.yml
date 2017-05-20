@@ -16,7 +16,6 @@ compiler:
   
 install:
   - if [ "$CXX" = "g++" ]; then export CXX="g++-5"; fi
-  - git submodule update --init
 
 script:
   - $CXX --version

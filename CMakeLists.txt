@@ -12,6 +12,7 @@ endif()
 enable_testing()
 add_subdirectory(googletest)
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/googletest/googletest/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Tests
