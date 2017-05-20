@@ -1,32 +1,42 @@
+#include <gtest/gtest.h>
+
 #include <thread_pool/thread_pool.hpp>
-#include <test.hpp>
 
 #include <thread>
 #include <future>
 #include <functional>
 #include <memory>
 
-using namespace tp;
-
-int main()
+namespace TestLinkage {
+size_t getWorkerIdForCurrentThread()
 {
-    std::cout << "*** Testing TP ***" << std::endl;
+    return *tp::detail::thread_id();
+}
 
-    doTest("post job", []()
+size_t getWorkerIdForCurrentThread2()
+{
+    return tp::Worker<128>::getWorkerIdForCurrentThread();
+}
+}
+
+TEST(ThreadPool, postJob)
+{
+    tp::ThreadPool pool;
+
+    std::packaged_task<int()> t([]()
         {
-            ThreadPool pool;
-
-            std::packaged_task<int()> t([]()
-                {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                    return 42;
-                });
-
-            std::future<int> r = t.get_future();
-
-            pool.post(t);
-
-            ASSERT(42 == r.get());
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            return 42;
         });
 
+    std::future<int> r = t.get_future();
+
+    pool.post(t);
+
+    ASSERT_EQ(42, r.get());
+}
+
+int main(int argc, char **argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }

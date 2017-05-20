@@ -2,18 +2,25 @@ cmake_minimum_required(VERSION 2.8)
 
 project(thread-pool-cpp CXX)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -Wextra")
 if(COVERAGE)
-    set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -g --coverage")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g --coverage")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --coverage")
 endif()
 
-# Get all include files
+# gtest
+enable_testing()
+add_subdirectory(googletest)
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
+# Tests
 add_subdirectory(tests)
+
+# Benchmark
 add_subdirectory(benchmark)
 
-# Install as header-only library
+# Install
 file(GLOB_RECURSE INSTALL_FILES_LIST "${CMAKE_CURRENT_SOURCE_DIR}/include/*")
 set_source_files_properties(${INSTALL_FILES_LIST} PROPERTIES HEADER_FILE_ONLY 1)
 add_library(HEADER_ONLY_TARGET STATIC ${INSTALL_FILES_LIST})
