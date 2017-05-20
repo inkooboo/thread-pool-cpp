@@ -100,7 +100,8 @@ namespace detail
 
 template <size_t TASK_SIZE>
 inline Worker<TASK_SIZE>::Worker(size_t queue_size)
-    : m_queue(queue_size), m_running_flag(true)
+    : m_queue(queue_size)
+    , m_running_flag(true)
 {
 }
 
