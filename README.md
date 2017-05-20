@@ -1,6 +1,7 @@
 thread-pool-cpp 
 =================  
 [![Build Status](https://travis-ci.org/inkooboo/thread-pool-cpp.svg?branch=master)](https://travis-ci.org/inkooboo/thread-pool-cpp)
+[![Codecov branch](https://img.shields.io/codecov/c/github/inkooboo/thread-pool-cpp/master.svg)]()
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
  * It is highly scalable and fast.
