@@ -125,21 +125,24 @@ TEST(FixedFunction, allocDealloc)
 TEST(FixedFunction, freeFunc)
 {
     tp::FixedFunction<int(int)> f(test_free_func);
-    ASSERT_EQ(3, f(3));
+    auto f1 = std::move(f);
+    ASSERT_EQ(3, f1(3));
 };
 
 TEST(FixedFunction, freeFuncTemplate)
 {
     tp::FixedFunction<std::string(std::string)> f(test_free_func_template<std::string>);
-    ASSERT_EQ(std::string("abc"), f("abc"));
+    auto f1 = std::move(f);
+    ASSERT_EQ(std::string("abc"), f1("abc"));
 }
 
 
 TEST(FixedFunction, voidFunc)
 {
     tp::FixedFunction<void(int &, int)> f(test_void);
+    auto f1 = std::move(f);
     int p = 0;
-    f(p, 42);
+    f1(p, 42);
     ASSERT_EQ(42, p);
 }
 
@@ -149,7 +152,8 @@ TEST(FixedFunction, classMethodVoid)
     A a;
     int i = 0;
     tp::FixedFunction<void(int &)> f(std::bind(&A::c, &a, _1));
-    f(i);
+    auto f1 = std::move(f);
+    f1(i);
     ASSERT_EQ(43, i);
 }
 
@@ -158,7 +162,8 @@ TEST(FixedFunction, classMethod1)
     using namespace std::placeholders;
     A a;
     tp::FixedFunction<int(const int&)> f(std::bind(&A::b, &a, _1));
-    ASSERT_EQ(4, f(4));
+    auto f1 = std::move(f);
+    ASSERT_EQ(4, f1(4));
 }
 
 TEST(FixedFunction, classMethod2)
@@ -167,7 +172,8 @@ TEST(FixedFunction, classMethod2)
     Foo<float> foo;
     foo.payload = 1.f;
     tp::FixedFunction<int(int)> f(std::bind(&Foo<float>::bar<int>, &foo, _1));
-    ASSERT_EQ(2, f(1));
+    auto f1 = std::move(f);
+    ASSERT_EQ(2, f1(1));
 }
 
 TEST(FixedFunction, lambda)
@@ -177,8 +183,8 @@ TEST(FixedFunction, lambda)
     {
         return s1;
     });
-
-    ASSERT_EQ(s1, f());
+    auto f1 = std::move(f);
+    ASSERT_EQ(s1, f1());
 }
 
 int main(int argc, char **argv) {
