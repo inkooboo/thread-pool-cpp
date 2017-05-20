@@ -32,6 +32,8 @@ after_success:
   - cmake -DCMAKE_BUILD_TYPE=Debug -DCOVERAGE=yes ..
   - make
   - ctest
+  - find -name "*.gcno"
+  - find -name "*.gcda"
   - lcov --gcov-tool gcov-5 --directory . --capture --output-file coverage.info
   - lcov --gcov-tool gcov-5 --remove coverage.info '/usr/*' --output-file coverage.info 
   - lcov --gcov-tool gcov-5 --remove coverage.info 'googletest' --output-file coverage.info 
