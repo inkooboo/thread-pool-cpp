@@ -8,15 +8,15 @@ addons:
     sources:
     - ubuntu-toolchain-r-test
     packages:
-    - g++-6
+    - g++-4.9
     - lcov
  
 compiler:
   - gcc
   
 install:
-  - if [ "$CXX" = "g++" ]; then export CXX="g++-6"; fi
-  - export GCOV="gcov-6"
+  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.9"; fi
+  - export GCOV="gcov-4.9"
 
 script:
   - $CXX --version
