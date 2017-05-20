@@ -1,8 +1,5 @@
 #pragma once
 
-#include <thread_pool/fixed_function.hpp>
-#include <thread_pool/mpsc_bounded_queue.hpp>
-
 #include <atomic>
 #include <thread>
 
@@ -11,17 +8,14 @@ namespace tp
 
 /**
  * @brief The Worker class owns task queue and executing thread.
- * In executing thread it tries to pop task from queue. If queue is empty
- * then it tries to steal task from the sibling worker. If stealing was
- * unsuccessful
- * then spins with one millisecond delay.
+ * In thread it tries to pop task from queue. If queue is empty then it tries
+ * to steal task from the sibling worker. If steal was unsuccessful then spins
+ * with one millisecond delay.
  */
-template <size_t TASK_SIZE>
+template <typename Task, template<typename> class Queue>
 class Worker
 {
 public:
-    using Task = FixedFunction<void(), TASK_SIZE>;
-
     /**
      * @brief Worker Constructor.
      * @param queue_size Length of undelaying task queue.
@@ -81,7 +75,7 @@ private:
      */
     void threadFunc(size_t id, Worker* steal_donor);
 
-    MPMCBoundedQueue<Task> m_queue;
+    Queue<Task> m_queue;
     std::atomic<bool> m_running_flag;
     std::thread m_thread;
 };
@@ -98,21 +92,21 @@ namespace detail
     }
 }
 
-template <size_t TASK_SIZE>
-inline Worker<TASK_SIZE>::Worker(size_t queue_size)
+template <typename Task, template<typename> class Queue>
+inline Worker<Task, Queue>::Worker(size_t queue_size)
     : m_queue(queue_size)
     , m_running_flag(true)
 {
 }
 
-template <size_t TASK_SIZE>
-inline Worker<TASK_SIZE>::Worker(Worker&& rhs) noexcept
+template <typename Task, template<typename> class Queue>
+inline Worker<Task, Queue>::Worker(Worker&& rhs) noexcept
 {
     *this = rhs;
 }
 
-template <size_t TASK_SIZE>
-inline Worker<TASK_SIZE>& Worker<TASK_SIZE>::operator=(Worker&& rhs) noexcept
+template <typename Task, template<typename> class Queue>
+inline Worker<Task, Queue>& Worker<Task, Queue>::operator=(Worker&& rhs) noexcept
 {
     if (this != &rhs)
     {
@@ -123,40 +117,40 @@ inline Worker<TASK_SIZE>& Worker<TASK_SIZE>::operator=(Worker&& rhs) noexcept
     return *this;
 }
 
-template <size_t TASK_SIZE>
-inline void Worker<TASK_SIZE>::stop()
+template <typename Task, template<typename> class Queue>
+inline void Worker<Task, Queue>::stop()
 {
     m_running_flag.store(false, std::memory_order_relaxed);
     m_thread.join();
 }
 
-template <size_t TASK_SIZE>
-inline void Worker<TASK_SIZE>::start(size_t id, Worker* steal_donor)
+template <typename Task, template<typename> class Queue>
+inline void Worker<Task, Queue>::start(size_t id, Worker* steal_donor)
 {
-    m_thread = std::thread(&Worker<TASK_SIZE>::threadFunc, this, id, steal_donor);
+    m_thread = std::thread(&Worker<Task, Queue>::threadFunc, this, id, steal_donor);
 }
 
-template <size_t TASK_SIZE>
-inline size_t Worker<TASK_SIZE>::getWorkerIdForCurrentThread()
+template <typename Task, template<typename> class Queue>
+inline size_t Worker<Task, Queue>::getWorkerIdForCurrentThread()
 {
     return *detail::thread_id();
 }
 
-template <size_t TASK_SIZE>
+template <typename Task, template<typename> class Queue>
 template <typename Handler>
-inline bool Worker<TASK_SIZE>::post(Handler&& handler)
+inline bool Worker<Task, Queue>::post(Handler&& handler)
 {
     return m_queue.push(std::forward<Handler>(handler));
 }
 
-template <size_t TASK_SIZE>
-inline bool Worker<TASK_SIZE>::steal(Task& task)
+template <typename Task, template<typename> class Queue>
+inline bool Worker<Task, Queue>::steal(Task& task)
 {
     return m_queue.pop(task);
 }
 
-template <size_t TASK_SIZE>
-inline void Worker<TASK_SIZE>::threadFunc(size_t id, Worker* steal_donor)
+template <typename Task, template<typename> class Queue>
+inline void Worker<Task, Queue>::threadFunc(size_t id, Worker* steal_donor)
 {
     *detail::thread_id() = id;
 
@@ -172,7 +166,7 @@ inline void Worker<TASK_SIZE>::threadFunc(size_t id, Worker* steal_donor)
             }
             catch(...)
             {
-                // supress all exceptions
+                // suppress all exceptions
             }
         }
         else

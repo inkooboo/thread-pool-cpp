@@ -1,5 +1,8 @@
 #pragma once
 
+#include <thread_pool/fixed_function.hpp>
+#include <thread_pool/mpsc_bounded_queue.hpp>
+#include <thread_pool/thread_pool_options.hpp>
 #include <thread_pool/worker.hpp>
 
 #include <atomic>
@@ -10,20 +13,10 @@
 namespace tp
 {
 
-/**
- * @brief The ThreadPoolOptions struct provides construction options for
- * ThreadPool.
- */
-struct ThreadPoolOptions
-{
-    enum
-    {
-        AUTODETECT = 0
-    };
-
-    size_t threads_count = AUTODETECT;
-    size_t worker_queue_size = 1024;
-};
+template <typename Task, template<typename> class Queue>
+class ThreadPoolImpl;
+using ThreadPool = ThreadPoolImpl<FixedFunction<void(), 128>,
+                                  MPMCBoundedQueue>;
 
 /**
  * @brief The ThreadPool class implements thread pool pattern.
@@ -33,7 +26,7 @@ struct ThreadPoolOptions
  * startegies.
  * It implements cooperative scheduling strategy for tasks.
  */
-template <size_t TASK_SIZE>
+template <typename Task, template<typename> class Queue>
 class ThreadPoolImpl {
 public:
     /**
@@ -79,56 +72,42 @@ public:
     void post(Handler&& handler);
 
 private:
-    Worker<TASK_SIZE>& getWorker();
+    Worker<Task, Queue>& getWorker();
 
-    std::vector<std::unique_ptr<Worker<TASK_SIZE>>> m_workers;
+    std::vector<std::unique_ptr<Worker<Task, Queue>>> m_workers;
     std::atomic<size_t> m_next_worker;
 };
-
-using ThreadPool = ThreadPoolImpl<128>;
 
 
 /// Implementation
 
-template <size_t TASK_SIZE>
-inline ThreadPoolImpl<TASK_SIZE>::ThreadPoolImpl(
+template <typename Task, template<typename> class Queue>
+inline ThreadPoolImpl<Task, Queue>::ThreadPoolImpl(
                                             const ThreadPoolOptions& options)
-    : m_next_worker(0)
+    : m_workers(options.threadCount())
+    , m_next_worker(0)
 {
-    size_t workers_count = options.threads_count;
-
-    if(ThreadPoolOptions::AUTODETECT == options.threads_count)
-    {
-        workers_count = std::thread::hardware_concurrency();
-    }
-
-    if(0 == workers_count)
-    {
-        workers_count = 1;
-    }
-
-    m_workers.resize(workers_count);
     for(auto& worker_ptr : m_workers)
     {
-        worker_ptr.reset(new Worker<TASK_SIZE>(options.worker_queue_size));
+        worker_ptr.reset(new Worker<Task, Queue>(options.queueSize()));
     }
 
     for(size_t i = 0; i < m_workers.size(); ++i)
     {
-        Worker<TASK_SIZE>* steal_donor =
+        Worker<Task, Queue>* steal_donor =
                                 m_workers[(i + 1) % m_workers.size()].get();
         m_workers[i]->start(i, steal_donor);
     }
 }
 
-template <size_t TASK_SIZE>
-inline ThreadPoolImpl<TASK_SIZE>::ThreadPoolImpl(ThreadPoolImpl<TASK_SIZE>&& rhs) noexcept
+template <typename Task, template<typename> class Queue>
+inline ThreadPoolImpl<Task, Queue>::ThreadPoolImpl(ThreadPoolImpl<Task, Queue>&& rhs) noexcept
 {
     *this = rhs;
 }
 
-template <size_t TASK_SIZE>
-inline ThreadPoolImpl<TASK_SIZE>::~ThreadPoolImpl()
+template <typename Task, template<typename> class Queue>
+inline ThreadPoolImpl<Task, Queue>::~ThreadPoolImpl()
 {
     for (auto& worker_ptr : m_workers)
     {
@@ -136,9 +115,9 @@ inline ThreadPoolImpl<TASK_SIZE>::~ThreadPoolImpl()
     }
 }
 
-template <size_t TASK_SIZE>
-inline ThreadPoolImpl<TASK_SIZE>&
-ThreadPoolImpl<TASK_SIZE>::operator=(ThreadPoolImpl<TASK_SIZE>&& rhs) noexcept
+template <typename Task, template<typename> class Queue>
+inline ThreadPoolImpl<Task, Queue>&
+ThreadPoolImpl<Task, Queue>::operator=(ThreadPoolImpl<Task, Queue>&& rhs) noexcept
 {
     if (this != &rhs)
     {
@@ -148,16 +127,16 @@ ThreadPoolImpl<TASK_SIZE>::operator=(ThreadPoolImpl<TASK_SIZE>&& rhs) noexcept
     return *this;
 }
 
-template <size_t TASK_SIZE>
+template <typename Task, template<typename> class Queue>
 template <typename Handler>
-inline bool ThreadPoolImpl<TASK_SIZE>::tryPost(Handler&& handler)
+inline bool ThreadPoolImpl<Task, Queue>::tryPost(Handler&& handler)
 {
     return getWorker().post(std::forward<Handler>(handler));
 }
 
-template <size_t TASK_SIZE>
+template <typename Task, template<typename> class Queue>
 template <typename Handler>
-inline void ThreadPoolImpl<TASK_SIZE>::post(Handler&& handler)
+inline void ThreadPoolImpl<Task, Queue>::post(Handler&& handler)
 {
     const auto ok = tryPost(std::forward<Handler>(handler));
     if (!ok)
@@ -166,10 +145,10 @@ inline void ThreadPoolImpl<TASK_SIZE>::post(Handler&& handler)
     }
 }
 
-template <size_t TASK_SIZE>
-inline Worker<TASK_SIZE>& ThreadPoolImpl<TASK_SIZE>::getWorker()
+template <typename Task, template<typename> class Queue>
+inline Worker<Task, Queue>& ThreadPoolImpl<Task, Queue>::getWorker()
 {
-    auto id = Worker<TASK_SIZE>::getWorkerIdForCurrentThread();
+    auto id = Worker<Task, Queue>::getWorkerIdForCurrentThread();
 
     if (id > m_workers.size())
     {

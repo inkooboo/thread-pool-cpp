@@ -10,3 +10,4 @@ endfunction()
 
 build_test(fixed_function fixed_function.t.cpp)
 build_test(thread_pool thread_pool.t.cpp)
+build_test(thread_pool_options thread_pool_options.t.cpp)

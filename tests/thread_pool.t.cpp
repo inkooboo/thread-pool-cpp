@@ -15,7 +15,7 @@ size_t getWorkerIdForCurrentThread()
 
 size_t getWorkerIdForCurrentThread2()
 {
-    return tp::Worker<128>::getWorkerIdForCurrentThread();
+    return tp::Worker<std::function<void()>, tp::MPMCBoundedQueue>::getWorkerIdForCurrentThread();
 }
 }
 
