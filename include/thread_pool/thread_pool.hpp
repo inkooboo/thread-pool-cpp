@@ -1,7 +1,7 @@
 #pragma once
 
 #include <thread_pool/fixed_function.hpp>
-#include <thread_pool/mpsc_bounded_queue.hpp>
+#include <thread_pool/mpmc_bounded_queue.hpp>
 #include <thread_pool/thread_pool_options.hpp>
 #include <thread_pool/worker.hpp>
 
