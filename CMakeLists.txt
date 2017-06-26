@@ -5,7 +5,7 @@ project(thread-pool-cpp CXX)
 option(TESTS "Enable testing" ON)
 option(INSTALL "Enable install option" OFF)
 option(COVERAGE "Enable code coverage" OFF)
-option(BENCHMARK "Build benchmark" OFF)
+option(BENCHMARK "Build benchmark" ON)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -Wsign-compare")
 if(COVERAGE)
