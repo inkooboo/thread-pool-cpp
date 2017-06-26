@@ -13,6 +13,10 @@ if(COVERAGE)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --coverage")
 endif()
 
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+
 # gtest
 if(TESTS)
   # Tests
@@ -22,7 +26,6 @@ if(TESTS)
   add_subdirectory(tests)
 endif()
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 
 # Benchmark

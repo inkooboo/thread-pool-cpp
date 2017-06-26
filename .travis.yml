@@ -10,7 +10,7 @@ matrix:
       addons:
         apt:
           sources: ['ubuntu-toolchain-r-test']
-          packages: ['gcc-5', 'g++-5', 'lcov']
+          packages: ['gcc-5', 'g++-5']
       env:
         - COMPILERCC=gcc-5
         - COMPILERCXX=g++-5
@@ -21,7 +21,7 @@ matrix:
       addons:
         apt:
           sources: ['llvm-toolchain-trusty-4.0']
-          packages: ['clang-4.0', 'lcov']
+          packages: ['clang-4.0']
       env:
         - COMPILERCC=clang-4.0
         - COMPILERCXX=clang++-4.0
