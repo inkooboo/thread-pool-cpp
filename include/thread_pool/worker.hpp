@@ -11,7 +11,9 @@
     #define ATTRIBUTE_TLS __thread
 #elif defined (_MSC_VER)
     #define ATTRIBUTE_TLS __declspec(thread)
-#else // !C++11 && !__GNUC__ && !_MSC_VER
+#else
+    // if you are reading this and still want to compile pool,
+    // you can compile pool by removing ATTRIBUTE_TLS everywhere in the code
     #error "Define a thread local storage qualifier for your compiler/platform!"
 #endif
 
