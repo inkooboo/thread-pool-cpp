@@ -100,7 +100,7 @@ namespace detail
 {
     inline size_t* thread_id()
     {
-        static thread_local size_t tss_id = -1u;
+        static ATTRIBUTE_TLS size_t tss_id = -1u;
         return &tss_id;
     }
 }
