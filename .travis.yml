@@ -45,9 +45,10 @@ script:
   - mkdir build
   - cd build
   - export CC=$COMPILERCC; export CXX=$COMPILERCXX
-  - cmake -DCMAKE_BUILD_TYPE=Release ..
-  - make VERBOSE=1
+  - cmake .. -DCMAKE_BUILD_TYPE=Release -DTESTS=ON -DINSTALL=OFF -DBENCHMARK=ON -DCOVERAGE=OFF
+  - make
   - ctest --verbose
+  - ./benchmark/benchmark
   - cd ..
 
 # after_success:
