@@ -3,18 +3,52 @@ sudo: false
 
 language: cpp
 
-os: linux
+matrix:
+  include:
+    - os: linux
+      compiler: gcc
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test']
+          packages: ['gcc-5', 'g++-5', 'lcov']
+      env:
+        - COMPILERCC=gcc-5
+        - COMPILERCXX=g++-5
 
-compiler: g++
+    - os: linux
+      dist: trusty
+      compiler: clang
+      addons:
+        apt:
+          sources: ['llvm-toolchain-trusty-4.0']
+          packages: ['clang-4.0', 'lcov']
+      env:
+        - COMPILERCC=clang-4.0
+        - COMPILERCXX=clang++-4.0
 
-addons:
-  apt:
-    packages:
-      - lcov
+
+    - os: osx
+      compiler: gcc
+      addons:
+        brew:
+          packages: ['lcov']
+      env:
+        - COMPILERCC=gcc
+        - COMPILERCXX=g++
+
+    - os: osx
+      compiler: clang
+      addons:
+        brew:
+          packages: ['lcov']
+      env:
+        - COMPILERCC=clang
+        - COMPILERCXX=clang++
 
 script:
   - mkdir build
   - cd build
+  - export CC=$COMPILERCC; export CXX=$COMPILERCXX
   - cmake -DCMAKE_BUILD_TYPE=Release ..
   - make VERBOSE=1
   - ctest --verbose
@@ -27,9 +61,9 @@ after_success:
   - make
   - ctest
   - lcov --directory . --capture --output-file coverage.info
-  - lcov --remove coverage.info '/usr/*' --output-file coverage.info 
-  - lcov --remove coverage.info '*googletest*' --output-file coverage.info 
-  - lcov --remove coverage.info '*.t.cpp' --output-file coverage.info 
+  - lcov --remove coverage.info '/usr/*' --output-file coverage.info
+  - lcov --remove coverage.info '*googletest*' --output-file coverage.info
+  - lcov --remove coverage.info '*.t.cpp' --output-file coverage.info
   - lcov --list coverage.info
   - bash <(curl -s https://codecov.io/bash) -f coverage.info
   - cd ..
