@@ -29,18 +29,12 @@ matrix:
 
     - os: osx
       compiler: gcc
-      before_install:
-        - brew update
-        - brew install lcov
       env:
         - COMPILERCC=gcc
         - COMPILERCXX=g++
 
     - os: osx
       compiler: clang
-      before_install:
-        - brew update
-        - brew install lcov
       env:
         - COMPILERCC=clang
         - COMPILERCXX=clang++
@@ -56,16 +50,16 @@ script:
   - ctest --verbose
   - cd ..
 
-after_success:
-  - mkdir coverage
-  - cd coverage
-  - cmake -DCMAKE_BUILD_TYPE=Debug -DCOVERAGE=yes ..
-  - make
-  - ctest
-  - lcov --directory . --capture --output-file coverage.info
-  - lcov --remove coverage.info '/usr/*' --output-file coverage.info
-  - lcov --remove coverage.info '*googletest*' --output-file coverage.info
-  - lcov --remove coverage.info '*.t.cpp' --output-file coverage.info
-  - lcov --list coverage.info
-  - bash <(curl -s https://codecov.io/bash) -f coverage.info
-  - cd ..
+# after_success:
+#   - mkdir coverage
+#   - cd coverage
+#   - cmake -DCMAKE_BUILD_TYPE=Debug -DCOVERAGE=yes ..
+#   - make
+#   - ctest
+#   - lcov --directory . --capture --output-file coverage.info
+#   - lcov --remove coverage.info '/usr/*' --output-file coverage.info
+#   - lcov --remove coverage.info '*googletest*' --output-file coverage.info
+#   - lcov --remove coverage.info '*.t.cpp' --output-file coverage.info
+#   - lcov --list coverage.info
+#   - bash <(curl -s https://codecov.io/bash) -f coverage.info
+#   - cd ..
