@@ -3,6 +3,19 @@
 #include <atomic>
 #include <thread>
 
+
+// to solve http://stackoverflow.com/questions/23791060/c-thread-local-storage-clang-503-0-40-mac-osx
+#if HAS_CXX11_THREAD_LOCAL
+    #define ATTRIBUTE_TLS thread_local
+#elif defined (__GNUC__)
+    #define ATTRIBUTE_TLS __thread
+#elif defined (_MSC_VER)
+    #define ATTRIBUTE_TLS __declspec(thread)
+#else // !C++11 && !__GNUC__ && !_MSC_VER
+    #error "Define a thread local storage qualifier for your compiler/platform!"
+#endif
+
+
 namespace tp
 {
 
