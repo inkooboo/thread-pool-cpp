@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <thread>
+#include <climits>
 
 namespace tp
 {
