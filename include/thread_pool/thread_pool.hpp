@@ -28,6 +28,9 @@ using ThreadPool = ThreadPoolImpl<FixedFunction<void(), 128>,
  */
 template <typename Task, template<typename> class Queue>
 class ThreadPoolImpl {
+
+    using WorkerVector = std::vector<std::unique_ptr<Worker<Task, Queue>>>;
+
 public:
     /**
      * @brief ThreadPool Construct and start new thread pool.
@@ -74,7 +77,7 @@ public:
 private:
     Worker<Task, Queue>& getWorker();
 
-    std::vector<std::unique_ptr<Worker<Task, Queue>>> m_workers;
+    WorkerVector m_workers;
     std::atomic<size_t> m_next_worker;
 };
 
@@ -94,9 +97,7 @@ inline ThreadPoolImpl<Task, Queue>::ThreadPoolImpl(
 
     for(size_t i = 0; i < m_workers.size(); ++i)
     {
-        Worker<Task, Queue>* steal_donor =
-                                m_workers[(i + 1) % m_workers.size()].get();
-        m_workers[i]->start(i, steal_donor);
+        m_workers[i]->start(i, &m_workers);
     }
 }
 
@@ -131,7 +132,7 @@ template <typename Task, template<typename> class Queue>
 template <typename Handler>
 inline bool ThreadPoolImpl<Task, Queue>::tryPost(Handler&& handler)
 {
-    return getWorker().post(std::forward<Handler>(handler));
+    return getWorker().tryPost(std::forward<Handler>(handler));
 }
 
 template <typename Task, template<typename> class Queue>
