@@ -116,7 +116,7 @@ inline ThreadPoolImpl<Task, Queue>::ThreadPoolImpl(
     #if defined __sun__  && defined AFFINITY
     processorid_t i, cpuid_max;
     cpuid_max = sysconf(_SC_CPUID_MAX);
-    for (i = 0; i <= cpuid_max; i++) {
+    for (i = 0; i <= cpuid_max; ++i) {
         if (p_online(i, P_STATUS) != -1)	/* Get only online cores ID */
             v_cpu_id.push_back(i);
     }
