@@ -30,3 +30,7 @@ See benchmark/benchmark.cpp for benchmark code.
 All code except [MPMCBoundedQueue](https://github.com/inkooboo/thread-pool-cpp/blob/master/include/thread_pool/mpmc_bounded_queue.hpp)
 is under MIT license.
 
+Additions
+=========
+1. Spin lock replaced to conditional variables.
+2. Affinity (by round-robin) added for Linux/Solaris.

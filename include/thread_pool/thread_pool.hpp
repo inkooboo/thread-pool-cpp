@@ -1,14 +1,26 @@
 #pragma once
 
-#include <thread_pool/fixed_function.hpp>
-#include <thread_pool/mpmc_bounded_queue.hpp>
-#include <thread_pool/thread_pool_options.hpp>
-#include <thread_pool/worker.hpp>
+#include <fixed_function.hpp>
+#include <mpmc_bounded_queue.hpp>
+#include <thread_pool_options.hpp>
+#include <worker.hpp>
 
 #include <atomic>
 #include <memory>
 #include <stdexcept>
 #include <vector>
+
+#ifdef AFFINITY
+#ifdef __sun__
+#include <sys/types.h>
+#include <sys/processor.h>
+#include <sys/procset.h>
+#include <unistd.h>		/* For sysconf */
+#elif __linux__
+#include <cstdio>		/* For fprintf */
+#include <sched.h>
+#endif
+#endif
 
 namespace tp
 {
@@ -75,7 +87,16 @@ private:
     Worker<Task, Queue>& getWorker();
 
     std::vector<std::unique_ptr<Worker<Task, Queue>>> m_workers;
-    std::atomic<size_t> m_next_worker;
+    std::atomic<std::size_t> m_next_worker;
+
+    #if (defined __sun__ || defined __linux__) && defined AFFINITY
+    std::size_t v_cpu = 0;
+    std::size_t v_cpu_max = std::thread::hardware_concurrency() - 1;
+    #endif
+
+    #if defined __sun__  && defined AFFINITY
+    std::vector<processorid_t> v_cpu_id;	/* Struct for CPU/core ID */
+    #endif
 };
 
 
@@ -92,10 +113,40 @@ inline ThreadPoolImpl<Task, Queue>::ThreadPoolImpl(
         worker_ptr.reset(new Worker<Task, Queue>(options.queueSize()));
     }
 
-    for(size_t i = 0; i < m_workers.size(); ++i)
+    #if defined __sun__  && defined AFFINITY
+    processorid_t i, cpuid_max;
+    cpuid_max = sysconf(_SC_CPUID_MAX);
+    for (i = 0; i <= cpuid_max; i++) {
+        if (p_online(i, P_STATUS) != -1)	/* Get only online cores ID */
+            v_cpu_id.push_back(i);
+    }
+    #endif
+
+    for(std::size_t i = 0; i < m_workers.size(); ++i)
     {
         Worker<Task, Queue>* steal_donor =
                                 m_workers[(i + 1) % m_workers.size()].get();
+
+	#if (defined __sun__ || defined __linux__) && defined AFFINITY
+	if (v_cpu > v_cpu_max) {
+		v_cpu = 0;
+	}
+
+	#ifdef __sun__
+	processor_bind(P_LWPID, P_MYID, v_cpu_id[v_cpu], NULL);
+	#elif __linux__
+	cpu_set_t mask;
+	CPU_ZERO(&mask);
+	CPU_SET(v_cpu, &mask);
+	pthread_t thread = pthread_self();
+	if (pthread_setaffinity_np(thread, sizeof(cpu_set_t), &mask) != 0) {
+		fprintf(stderr, "Error setting thread affinity\n");
+	}
+	#endif
+
+	++v_cpu;
+	#endif
+
         m_workers[i]->start(i, steal_donor);
     }
 }

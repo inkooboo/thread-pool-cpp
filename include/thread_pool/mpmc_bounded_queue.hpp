@@ -63,7 +63,7 @@ public:
      * @param size Power of 2 number - queue length.
      * @throws std::invalid_argument if size is bad.
      */
-    explicit MPMCBoundedQueue(size_t size);
+    explicit MPMCBoundedQueue(std::size_t size);
 
     /**
      * @brief Move ctor implementation.
@@ -93,7 +93,7 @@ public:
 private:
     struct Cell
     {
-        std::atomic<size_t> sequence;
+        std::atomic<std::size_t> sequence;
         T data;
 
         Cell() = default;
@@ -120,11 +120,11 @@ private:
 
     Cacheline pad0;
     std::vector<Cell> m_buffer;
-    /* const */ size_t m_buffer_mask;
+    /* const */ std::size_t m_buffer_mask;
     Cacheline pad1;
-    std::atomic<size_t> m_enqueue_pos;
+    std::atomic<std::size_t> m_enqueue_pos;
     Cacheline pad2;
-    std::atomic<size_t> m_dequeue_pos;
+    std::atomic<std::size_t> m_dequeue_pos;
     Cacheline pad3;
 };
 
@@ -132,7 +132,7 @@ private:
 /// Implementation
 
 template <typename T>
-inline MPMCBoundedQueue<T>::MPMCBoundedQueue(size_t size)
+inline MPMCBoundedQueue<T>::MPMCBoundedQueue(std::size_t size)
     : m_buffer(size), m_buffer_mask(size - 1), m_enqueue_pos(0),
       m_dequeue_pos(0)
 {
@@ -142,7 +142,7 @@ inline MPMCBoundedQueue<T>::MPMCBoundedQueue(size_t size)
         throw std::invalid_argument("buffer size should be a power of 2");
     }
 
-    for(size_t i = 0; i < size; ++i)
+    for(std::size_t i = 0; i < size; ++i)
     {
         m_buffer[i].sequence = i;
     }
@@ -172,11 +172,11 @@ template <typename U>
 inline bool MPMCBoundedQueue<T>::push(U&& data)
 {
     Cell* cell;
-    size_t pos = m_enqueue_pos.load(std::memory_order_relaxed);
+    std::size_t pos = m_enqueue_pos.load(std::memory_order_relaxed);
     for(;;)
     {
         cell = &m_buffer[pos & m_buffer_mask];
-        size_t seq = cell->sequence.load(std::memory_order_acquire);
+        std::size_t seq = cell->sequence.load(std::memory_order_acquire);
         intptr_t dif = (intptr_t)seq - (intptr_t)pos;
         if(dif == 0)
         {
@@ -207,11 +207,11 @@ template <typename T>
 inline bool MPMCBoundedQueue<T>::pop(T& data)
 {
     Cell* cell;
-    size_t pos = m_dequeue_pos.load(std::memory_order_relaxed);
+    std::size_t pos = m_dequeue_pos.load(std::memory_order_relaxed);
     for(;;)
     {
         cell = &m_buffer[pos & m_buffer_mask];
-        size_t seq = cell->sequence.load(std::memory_order_acquire);
+        std::size_t seq = cell->sequence.load(std::memory_order_acquire);
         intptr_t dif = (intptr_t)seq - (intptr_t)(pos + 1);
         if(dif == 0)
         {
