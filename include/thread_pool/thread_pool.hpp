@@ -100,7 +100,6 @@ private:
     #endif
 };
 
-
 /// Implementation
 
 template <typename Task, template<typename> class Queue>
@@ -135,20 +134,18 @@ inline ThreadPoolImpl<Task, Queue>::ThreadPoolImpl(
             if (v_cpu > v_cpu_max) {
                 v_cpu = 0;
             }
-        }
 
-        #ifdef __sun__
-        if (v_affinity) {
+            #ifdef __sun__
             processor_bind(P_LWPID, P_MYID, v_cpu_id[v_cpu], NULL);
-        #elif __linux__
+            #elif __linux__
             cpu_set_t mask;
             CPU_ZERO(&mask);
             CPU_SET(v_cpu, &mask);
-            pthread_t thread = pthread_self();
-            if (pthread_setaffinity_np(thread, sizeof(cpu_set_t), &mask) != 0) {
+            pthread_t v_thread = pthread_self();
+            if (pthread_setaffinity_np(v_thread, sizeof(cpu_set_t), &mask) != 0) {
                 fprintf(stderr, "Error setting thread affinity\n");
             }
-	#endif
+	    #endif
 
             ++v_cpu;
         }
