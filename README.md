@@ -33,4 +33,5 @@ is under MIT license.
 Additions
 =========
 1. Spin lock replaced to conditional variables.
-2. Affinity (by round-robin) added for Linux/Solaris.
+2. Affinity (by round-robin) added for Linux/Solaris. Affinity control flag added.
+3. Safety check added when pool destruction.
