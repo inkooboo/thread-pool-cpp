@@ -10,20 +10,23 @@
 #include <stdexcept>
 #include <vector>
 
-#ifdef __sun__
+#if defined __sun__
 #include <sys/types.h>
 #include <sys/processor.h>
 #include <sys/procset.h>
 #include <unistd.h>		/* For sysconf */
-#elif __linux__
+#elif defined __linux__
 #include <cstdio>		/* For fprintf */
 #include <sched.h>
+#elif defined __FreeBSD__
+#include <pthread_np.h>
+#include <sys/cpuset.h>
 #endif
 
 namespace tp
 {
 
-#if defined __sun__ || defined __linux__
+#if defined __sun__ || defined __linux__ || defined __FreeBSD__
 static bool v_affinity = false;	/* Default: disabled */
 #endif
 
@@ -90,7 +93,7 @@ private:
     std::vector<std::unique_ptr<Worker<Task, Queue>>> m_workers;
     std::atomic<std::size_t> m_next_worker;
 
-    #if defined __sun__ || defined __linux__
+    #if defined __sun__ || defined __linux__ || defined __FreeBSD__
     std::size_t v_cpu = 0;
     std::size_t v_cpu_max = std::thread::hardware_concurrency() - 1;
     #endif
@@ -129,20 +132,28 @@ inline ThreadPoolImpl<Task, Queue>::ThreadPoolImpl(
         Worker<Task, Queue>* steal_donor =
                                 m_workers[(i + 1) % m_workers.size()].get();
 
-	#if defined __sun__ || defined __linux__
+	#if defined __sun__ || defined __linux__ || defined __FreeBSD__
         if (v_affinity) {
             if (v_cpu > v_cpu_max) {
                 v_cpu = 0;
             }
 
-            #ifdef __sun__
+            #if defined __sun__
             processor_bind(P_LWPID, P_MYID, v_cpu_id[v_cpu], NULL);
-            #elif __linux__
+            #elif defined __linux__ || defined __FreeBSD__
+            #if defined __linux__
             cpu_set_t mask;
+            #elif defined __FreeBSD__
+            cpuset_t mask;
+            #endif
             CPU_ZERO(&mask);
             CPU_SET(v_cpu, &mask);
             pthread_t v_thread = pthread_self();
+            #if defined __linux__
             if (pthread_setaffinity_np(v_thread, sizeof(cpu_set_t), &mask) != 0) {
+            #elif defined __FreeBSD__
+            if (pthread_setaffinity_np(v_thread, sizeof(cpuset_t), &mask) != 0) {
+            #endif
                 fprintf(stderr, "Error setting thread affinity\n");
             }
 	    #endif
