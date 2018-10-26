@@ -21,7 +21,6 @@
 #elif defined __FreeBSD__
 #include <cstdio>		/* For fprintf */
 #include <pthread_np.h>
-#include <sys/cpuset.h>
 #endif
 
 namespace tp
