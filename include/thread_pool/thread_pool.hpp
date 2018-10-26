@@ -135,9 +135,8 @@ inline ThreadPoolImpl<Task, Queue>::ThreadPoolImpl(
 
 	#if defined __sun__ || defined __linux__ || defined __FreeBSD__
         if (v_affinity) {
-            if (v_cpu > v_cpu_max) {
+            if (v_cpu > v_cpu_max)
                 v_cpu = 0;
-            }
 
             #if defined __sun__
             processor_bind(P_LWPID, P_MYID, v_cpu_id[v_cpu], NULL);
@@ -151,12 +150,11 @@ inline ThreadPoolImpl<Task, Queue>::ThreadPoolImpl(
             CPU_SET(v_cpu, &mask);
             pthread_t v_thread = pthread_self();
             #if defined __linux__
-            if (pthread_setaffinity_np(v_thread, sizeof(cpu_set_t), &mask) != 0) {
+            if (pthread_setaffinity_np(v_thread, sizeof(cpu_set_t), &mask) != 0)
             #elif defined __FreeBSD__
-            if (pthread_setaffinity_np(v_thread, sizeof(cpuset_t), &mask) != 0) {
+            if (pthread_setaffinity_np(v_thread, sizeof(cpuset_t), &mask) != 0)
             #endif
                 fprintf(stderr, "Error setting thread affinity\n");
-            }
 	    #endif
 
             ++v_cpu;
