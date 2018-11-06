@@ -119,9 +119,9 @@ inline ThreadPoolImpl<Task, Queue>::ThreadPoolImpl(
     #if defined __sun__
     if (v_affinity) {
         processorid_t i, cpuid_max;
-        cpuid_max = sysconf(_SC_CPUID_MAX);
+        cpuid_max = sysconf(_SC_NPROCESSORS_CONF);
         for (i = 0; i <= cpuid_max; ++i) {
-            if (p_online(i, P_STATUS) != -1)	/* Get only online cores ID */
+            if (p_online(i, P_STATUS) == P_ONLINE)	/* Get only online cores ID */
                 v_cpu_id.push_back(i);
         }
     }
