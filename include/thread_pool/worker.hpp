@@ -124,8 +124,8 @@ inline Worker<Task, Queue>& Worker<Task, Queue>::operator=(Worker&& rhs) noexcep
 template <typename Task, template<typename> class Queue>
 inline void Worker<Task, Queue>::stop()
 {
-    m_conditional_lock.notify_one();
     m_running_flag.store(false, std::memory_order_relaxed);
+    m_conditional_lock.notify_one();
     if(m_thread.joinable()) {
         m_thread.join();
     }
@@ -147,14 +147,13 @@ template <typename Task, template<typename> class Queue>
 template <typename Handler>
 inline bool Worker<Task, Queue>::post(Handler&& handler)
 {
-    m_conditional_lock.notify_one();
+    m_conditional_lock.notify_all();
     return m_queue.push(std::forward<Handler>(handler));
 }
 
 template <typename Task, template<typename> class Queue>
 inline bool Worker<Task, Queue>::steal(Task& task)
 {
-    m_conditional_lock.notify_one();
     return m_queue.pop(task);
 }
 
