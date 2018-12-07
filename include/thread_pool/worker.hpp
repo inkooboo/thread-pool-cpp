@@ -159,7 +159,7 @@ template <typename Task, template<typename> class Queue>
 template <typename Handler>
 inline bool Worker<Task, Queue>::tryPost(Handler&& handler)
 {
-    m_conditional_lock.notify_all();
+    m_conditional_lock.notify_one();
     return m_queue.push(std::forward<Handler>(handler));
 }
 
