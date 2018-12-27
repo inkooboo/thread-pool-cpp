@@ -44,7 +44,7 @@ public:
     {
         typedef typename std::remove_reference<FUNC>::type unref_type;
 
-        static_assert(sizeof(unref_type) <= STORAGE_SIZE,
+        static_assert(sizeof(unref_type) < STORAGE_SIZE,
             "functional object doesn't fit into internal storage");
         static_assert(std::is_move_constructible<unref_type>::value,
             "Should be of movable type");

@@ -42,7 +42,7 @@ public:
      * @param id Worker ID.
      * @param workers Sibling workers for performing round robin work stealing.
      */
-    void start(std::size_t id, WorkerVector* workers);
+    void start(std::size_t id, WorkerVector& workers);
 
     /**
      * @brief stop Stop all worker's thread and stealing activity.
@@ -78,14 +78,14 @@ private:
     * @param task Place for the obtained task to be stored.
     * @param workers Sibling workers for performing round robin work stealing.
     */
-    bool tryRoundRobinSteal(Task& task, WorkerVector* workers);
+    bool tryRoundRobinSteal(Task& task, WorkerVector& workers);
 
     /**
      * @brief threadFunc Executing thread function.
      * @param id Worker ID to be associated with this thread.
      * @param workers Sibling workers for performing round robin work stealing.
      */
-    void threadFunc(size_t id, WorkerVector* workers);
+    void threadFunc(std::size_t id, WorkerVector* workers);
 
     Queue<Task> m_queue;
     std::atomic<bool> m_running_flag;
@@ -100,10 +100,10 @@ private:
 
 namespace detail
 {
-    inline std::size_t* thread_id()
+    inline std::size_t& thread_id()
     {
         static thread_local std::size_t tss_id = std::numeric_limits<std::size_t>::max();
-        return &tss_id;
+        return tss_id;
     }
 }
 
@@ -144,15 +144,15 @@ inline void Worker<Task, Queue>::stop()
 }
 
 template <typename Task, template<typename> class Queue>
-inline void Worker<Task, Queue>::start(std::size_t id, WorkerVector* workers)
+inline void Worker<Task, Queue>::start(std::size_t id, WorkerVector& workers)
 {
-    m_thread = std::thread(&Worker<Task, Queue>::threadFunc, this, id, workers);
+    m_thread = std::thread(&Worker<Task, Queue>::threadFunc, this, id, &workers);
 }
 
 template <typename Task, template<typename> class Queue>
 inline std::size_t Worker<Task, Queue>::getWorkerIdForCurrentThread()
 {
-    return *detail::thread_id();
+    return detail::thread_id();
 }
 
 template <typename Task, template<typename> class Queue>
@@ -170,29 +170,29 @@ inline bool Worker<Task, Queue>::tryGetLocalTask(Task& task)
 }
 
 template <typename Task, template<typename> class Queue>
-inline bool Worker<Task, Queue>::tryRoundRobinSteal(Task& task, WorkerVector* workers)
+inline bool Worker<Task, Queue>::tryRoundRobinSteal(Task& task, WorkerVector& workers)
 {
     auto starting_index = m_next_donor;
     // Iterate once through the worker ring, checking for queued work items on each thread.
     do
     {
         // Don't steal from local queue.
-        if (m_next_donor != *detail::thread_id() && workers->at(m_next_donor)->tryGetLocalTask(task))
+        if (m_next_donor != detail::thread_id() && workers[m_next_donor]->tryGetLocalTask(task))
         {
             // Increment before returning so that m_next_donor always points to the worker that has gone the longest
             // without a steal attempt. This helps enforce fairness in the stealing.
-            ++m_next_donor %= workers->size();
+            ++m_next_donor %= workers.size();
             return true;
         }
-        ++m_next_donor %= workers->size();
+        ++m_next_donor %= workers.size();
     } while (m_next_donor != starting_index);
     return false;
 }
 
 template <typename Task, template<typename> class Queue>
-inline void Worker<Task, Queue>::threadFunc(size_t id, WorkerVector* workers)
+inline void Worker<Task, Queue>::threadFunc(std::size_t id, WorkerVector* workers)
 {
-    *detail::thread_id() = id;
+    detail::thread_id() = id;
     m_next_donor = ++id % workers->size();
 
     Task handler;
@@ -200,7 +200,7 @@ inline void Worker<Task, Queue>::threadFunc(size_t id, WorkerVector* workers)
     while (m_running_flag.load(std::memory_order_relaxed))
     {
         // Prioritize local queue, then try stealing from sibling workers.
-        if (tryGetLocalTask(handler) || tryRoundRobinSteal(handler, workers))
+        if (tryGetLocalTask(handler) || tryRoundRobinSteal(handler, *workers))
         {
             try
             {

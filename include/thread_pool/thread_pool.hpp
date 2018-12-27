@@ -161,7 +161,7 @@ inline ThreadPoolImpl<Task, Queue>::ThreadPoolImpl(
         }
 	#endif
 
-        m_workers[i]->start(i, &m_workers);
+        m_workers[i]->start(i, m_workers);
     }
 }
 
@@ -223,4 +223,5 @@ inline Worker<Task, Queue>& ThreadPoolImpl<Task, Queue>::getWorker()
 
     return *m_workers[id];
 }
+
 }
