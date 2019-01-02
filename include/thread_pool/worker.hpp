@@ -85,7 +85,7 @@ private:
      * @param id Worker ID to be associated with this thread.
      * @param workers Sibling workers for performing round robin work stealing.
      */
-    void threadFunc(std::size_t id, WorkerVector* workers);
+    void threadFunc(std::size_t id, WorkerVector& workers);
 
     Queue<Task> m_queue;
     std::atomic<bool> m_running_flag;
@@ -146,7 +146,7 @@ inline void Worker<Task, Queue>::stop()
 template <typename Task, template<typename> class Queue>
 inline void Worker<Task, Queue>::start(std::size_t id, WorkerVector& workers)
 {
-    m_thread = std::thread(&Worker<Task, Queue>::threadFunc, this, id, &workers);
+    m_thread = std::thread(&Worker<Task, Queue>::threadFunc, this, id, std::ref(workers));
 }
 
 template <typename Task, template<typename> class Queue>
@@ -190,17 +190,17 @@ inline bool Worker<Task, Queue>::tryRoundRobinSteal(Task& task, WorkerVector& wo
 }
 
 template <typename Task, template<typename> class Queue>
-inline void Worker<Task, Queue>::threadFunc(std::size_t id, WorkerVector* workers)
+inline void Worker<Task, Queue>::threadFunc(std::size_t id, WorkerVector& workers)
 {
     detail::thread_id() = id;
-    m_next_donor = ++id % workers->size();
+    m_next_donor = ++id % workers.size();
 
     Task handler;
 
     while (m_running_flag.load(std::memory_order_relaxed))
     {
         // Prioritize local queue, then try stealing from sibling workers.
-        if (tryGetLocalTask(handler) || tryRoundRobinSteal(handler, *workers))
+        if (tryGetLocalTask(handler) || tryRoundRobinSteal(handler, workers))
         {
             try
             {

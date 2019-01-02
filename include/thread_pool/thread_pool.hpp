@@ -1,14 +1,15 @@
 #pragma once
 
-#include <fixed_function.hpp>
 #include <mpmc_bounded_queue.hpp>
 #include <thread_pool_options.hpp>
 #include <worker.hpp>
 
+#include <stdexcept>
 #include <atomic>
 #include <memory>
-#include <stdexcept>
 #include <vector>
+#include <functional>
+#include <utility>
 
 #if defined __sun__
 #include <sys/types.h>
@@ -33,7 +34,7 @@ static bool v_affinity = false;	/* Default: disabled */
 template <typename Task, template<typename> class Queue>
 class ThreadPoolImpl;
 
-using ThreadPool = ThreadPoolImpl<FixedFunction<void(), 128>,
+using ThreadPool = ThreadPoolImpl<std::function<void()>,
                                   MPMCBoundedQueue>;
 
 /**

@@ -187,7 +187,7 @@ template <typename U>
 inline bool MPMCBoundedQueue<T>::push(U&& data)
 {
     Cell* cell;
-    std::size_t pos = m_enqueue_pos.load(std::memory_order_acquire);
+    std::size_t pos = m_enqueue_pos.load(std::memory_order_relaxed);
     for(;;)
     {
         cell = &m_buffer[pos & m_buffer_mask];
@@ -195,7 +195,7 @@ inline bool MPMCBoundedQueue<T>::push(U&& data)
         intptr_t dif = (intptr_t)seq - (intptr_t)pos;
         if(dif == 0)
         {
-            if(m_enqueue_pos.compare_exchange_weak(pos, pos + 1, std::memory_order_acq_rel))
+            if(m_enqueue_pos.compare_exchange_weak(pos, pos + 1, std::memory_order_relaxed))
                 break;
         }
         else if(dif < 0)
@@ -204,7 +204,7 @@ inline bool MPMCBoundedQueue<T>::push(U&& data)
         }
         else
         {
-            pos = m_enqueue_pos.load(std::memory_order_acquire);
+            pos = m_enqueue_pos.load(std::memory_order_relaxed);
         }
     }
 
@@ -219,7 +219,7 @@ template <typename T>
 inline bool MPMCBoundedQueue<T>::pop(T& data)
 {
     Cell* cell;
-    std::size_t pos = m_dequeue_pos.load(std::memory_order_acquire);
+    std::size_t pos = m_dequeue_pos.load(std::memory_order_relaxed);
     for(;;)
     {
         cell = &m_buffer[pos & m_buffer_mask];
@@ -227,7 +227,7 @@ inline bool MPMCBoundedQueue<T>::pop(T& data)
         intptr_t dif = (intptr_t)seq - (intptr_t)(pos + 1);
         if(dif == 0)
         {
-            if(m_dequeue_pos.compare_exchange_weak(pos, pos + 1, std::memory_order_acq_rel))
+            if(m_dequeue_pos.compare_exchange_weak(pos, pos + 1, std::memory_order_relaxed))
                 break;
         }
         else if(dif < 0)
@@ -236,7 +236,7 @@ inline bool MPMCBoundedQueue<T>::pop(T& data)
         }
         else
         {
-            pos = m_dequeue_pos.load(std::memory_order_acquire);
+            pos = m_dequeue_pos.load(std::memory_order_relaxed);
         }
     }
 
