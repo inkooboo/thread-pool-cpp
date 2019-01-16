@@ -93,7 +93,7 @@ private:
     std::size_t m_next_donor;
     std::mutex m_conditional_mutex;
     std::condition_variable m_conditional_lock;
-    std::atomic<bool> m_ready{false};
+    bool m_ready = false;
 
 };
 
@@ -141,7 +141,7 @@ inline void Worker<Task, Queue>::stop()
     m_running_flag.store(false, std::memory_order_relaxed);
     {
         std::lock_guard<std::mutex> lock(m_conditional_mutex);
-        m_ready.store(true, std::memory_order_relaxed);
+        m_ready = true;
     }
     m_conditional_lock.notify_one();
     if(m_thread.joinable()) {
@@ -167,7 +167,7 @@ inline bool Worker<Task, Queue>::tryPost(Handler&& handler)
 {
     {
         std::lock_guard<std::mutex> lock(m_conditional_mutex);
-        m_ready.store(true, std::memory_order_relaxed);
+        m_ready = true;
     }
     m_conditional_lock.notify_one();
     return m_queue.push(std::forward<Handler>(handler));
@@ -224,7 +224,7 @@ inline void Worker<Task, Queue>::threadFunc(std::size_t id, WorkerVector& worker
         else
         {
             std::unique_lock<std::mutex> lock(m_conditional_mutex);
-            m_conditional_lock.wait(lock, [this] { return m_ready.exchange(false, std::memory_order_acq_rel); });
+            m_conditional_lock.wait(lock, [this] { return std::exchange(m_ready, false); });
         }
     }
 }
