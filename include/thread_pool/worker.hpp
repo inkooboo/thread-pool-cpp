@@ -224,7 +224,6 @@ inline void Worker<Task, Queue>::threadFunc(std::size_t id, WorkerVector& worker
         else
         {
             std::unique_lock<std::mutex> lock(m_conditional_mutex);
-            if (std::exchange(m_ready, false)) continue;    // If post() occurs here, don't sleep
             m_conditional_lock.wait(lock, [this] { return std::exchange(m_ready, false); });
         }
     }
