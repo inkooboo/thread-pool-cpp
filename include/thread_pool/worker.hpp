@@ -42,7 +42,7 @@ public:
      * @param id Worker ID.
      * @param workers Sibling workers for performing round robin work stealing.
      */
-    void start(std::size_t id, WorkerVector& workers);
+    void start(const std::size_t id, WorkerVector& workers);
 
     /**
      * @brief stop Stop all worker's thread and stealing activity.
@@ -144,13 +144,11 @@ inline void Worker<Task, Queue>::stop()
         m_ready = true;
     }
     m_conditional_lock.notify_one();
-    if(m_thread.joinable()) {
-        m_thread.join();
-    }
+    m_thread.join();
 }
 
 template <typename Task, template<typename> class Queue>
-inline void Worker<Task, Queue>::start(std::size_t id, WorkerVector& workers)
+inline void Worker<Task, Queue>::start(const std::size_t id, WorkerVector& workers)
 {
     m_thread = std::thread(&Worker<Task, Queue>::threadFunc, this, id, std::ref(workers));
 }
@@ -207,7 +205,7 @@ inline void Worker<Task, Queue>::threadFunc(std::size_t id, WorkerVector& worker
 
     Task handler;
 
-    while (m_running_flag.load(std::memory_order_relaxed))
+    for (;;)
     {
         // Prioritize local queue, then try stealing from sibling workers.
         if (tryGetLocalTask(handler) || tryRoundRobinSteal(handler, workers))
@@ -227,6 +225,7 @@ inline void Worker<Task, Queue>::threadFunc(std::size_t id, WorkerVector& worker
             if (std::exchange(m_ready, false)) continue;    // If post() occurs here, don't sleep
             m_conditional_lock.wait(lock, [this] { return std::exchange(m_ready, false); });
         }
+        if (!m_running_flag.load(std::memory_order_relaxed)) break;
     }
 }
 
