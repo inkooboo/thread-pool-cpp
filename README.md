@@ -34,5 +34,5 @@ Additions
 =========
 1. Spin lock replaced to conditional variable. Spurious wakeup protection added.
 2. Affinity (by round-robin) added for Linux/Solaris/FreeBSD. Affinity control flag added.
-3. Safety check added when pool destruction.
-4. Round Robin Queue Servicing from https://github.com/inkooboo/thread-pool-cpp/pull/24 are implemented.
+3. Round Robin Queue Servicing from https://github.com/inkooboo/thread-pool-cpp/pull/24 are implemented.
+4. Oracle Developer Studio support
