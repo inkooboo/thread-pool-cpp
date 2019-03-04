@@ -28,14 +28,24 @@ public:
     explicit Worker(std::size_t queue_size);
 
     /**
-     * @brief Move ctor implementation.
-     */
-    Worker(Worker&& rhs) noexcept;
+    * @brief Copy ctor implementation.
+    */
+    Worker(Worker const&) = delete;
 
     /**
-     * @brief Move assignment implementaion.
-     */
-    Worker& operator=(Worker&& rhs) noexcept;
+    * @brief Copy assignment implementation.
+    */
+    Worker& operator=(Worker const& rhs) = delete;
+
+    /**
+    * @brief Move ctor implementation.
+    */
+    Worker(Worker&& rhs) = delete;
+
+    /**
+    * @brief Move assignment implementaion.
+    */
+    Worker& operator=(Worker&& rhs) = delete;
 
     /**
      * @brief start Create the executing thread and start tasks execution.
@@ -115,24 +125,6 @@ inline Worker<Task, Queue>::Worker(std::size_t queue_size)
     , m_running_flag(true)
     , m_next_donor(0) // Initialized in threadFunc.
 {
-}
-
-template <typename Task, template<typename> class Queue>
-inline Worker<Task, Queue>::Worker(Worker&& rhs) noexcept
-{
-    *this = rhs;
-}
-
-template <typename Task, template<typename> class Queue>
-inline Worker<Task, Queue>& Worker<Task, Queue>::operator=(Worker&& rhs) noexcept
-{
-    if (this != &rhs)
-    {
-        m_queue = std::move(rhs.m_queue);
-        m_running_flag = rhs.m_running_flag.load();
-        m_thread = std::move(rhs.m_thread);
-    }
-    return *this;
 }
 
 template <typename Task, template<typename> class Queue>
