@@ -12,8 +12,8 @@ namespace tp
 /**
  * @brief The Worker class owns task queue and executing thread.
  * In thread it tries to pop task from queue. If queue is empty then it tries
- * to steal task from the sibling worker. If steal was unsuccessful then spins
- * with one millisecond delay.
+ * to steal task from the sibling worker. If steal was unsuccessful then run
+ * deep sleep sequence.
  */
 template <typename Task, template<typename> class Queue>
 class Worker
@@ -69,13 +69,6 @@ public:
     bool tryPost(Handler&& handler);
 
     /**
-     * @brief tryGetLocalTask Get one task from this worker queue.
-     * @param task Place for the obtained task to be stored.
-     * @return true on success.
-     */
-    bool tryGetLocalTask(Task& task);
-
-    /**
      * @brief getWorkerIdForCurrentThread Return worker ID associated with
      * current thread if exists.
      * @return Worker ID.
@@ -83,6 +76,13 @@ public:
     static std::size_t getWorkerIdForCurrentThread();
 
 private:
+    /**
+     * @brief tryGetLocalTask Get one task from this worker queue.
+     * @param task Place for the obtained task to be stored.
+     * @return true on success.
+     */
+    bool tryGetLocalTask(Task& task);
+
     /**
     * @brief tryRoundRobinSteal Try stealing a thread from sibling workers in a round-robin fashion.
     * @param task Place for the obtained task to be stored.
@@ -193,7 +193,7 @@ template <typename Task, template<typename> class Queue>
 inline void Worker<Task, Queue>::threadFunc(std::size_t id, WorkerVector& workers)
 {
     detail::thread_id() = id;
-    m_next_donor = ++id % workers.size();
+    m_next_donor = (id + 1) % workers.size();
 
     Task handler;
 
