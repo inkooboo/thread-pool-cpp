@@ -16,6 +16,7 @@
 #include <utility>
 
 #if defined __sun__
+#include <cstdio>		/* For fprintf */
 #include <sys/types.h>
 #include <sys/processor.h>
 #include <sys/procset.h>
@@ -108,8 +109,7 @@ private:
     std::atomic<std::size_t> m_next_worker;
 
     #if defined __sun__ || defined __linux__ || defined __FreeBSD__
-    std::size_t v_cpu = 0;
-    std::size_t v_cpu_max = std::thread::hardware_concurrency() - 1;
+    std::size_t v_cpu = 0, v_cpu_max = std::thread::hardware_concurrency() - 1;
     #endif
 
     #if defined __sun__
@@ -132,9 +132,7 @@ inline ThreadPoolImpl<Task, Queue>::ThreadPoolImpl(
 
     #if defined __sun__
     if (v_affinity) {
-        processorid_t i, cpuid_max;
-        cpuid_max = sysconf(_SC_CPUID_MAX);
-        for (i = 0; i <= cpuid_max; ++i) {
+        for (processorid_t i = 0; i <= sysconf(_SC_CPUID_MAX); ++i) {
             if (p_online(i, P_STATUS) == P_ONLINE)	/* Get only online cores ID */
                 v_cpu_id.push_back(i);
         }
@@ -147,26 +145,24 @@ inline ThreadPoolImpl<Task, Queue>::ThreadPoolImpl(
         if (v_affinity) {
             if (v_cpu > v_cpu_max)
                 v_cpu = 0;
-
-            #if defined __sun__
-            processor_bind(P_LWPID, P_MYID, v_cpu_id[v_cpu], NULL);
-            #elif defined __linux__ || defined __FreeBSD__
             #if defined __linux__
             cpu_set_t mask;
             #elif defined __FreeBSD__
             cpuset_t mask;
             #endif
+            #if defined __linux__ || defined __FreeBSD__
             CPU_ZERO(&mask);
             CPU_SET(v_cpu, &mask);
             pthread_t v_thread = pthread_self();
+            #endif
             #if defined __linux__
             if (pthread_setaffinity_np(v_thread, sizeof(cpu_set_t), &mask) != 0)
             #elif defined __FreeBSD__
             if (pthread_setaffinity_np(v_thread, sizeof(cpuset_t), &mask) != 0)
+            #elif defined __sun__
+            if (processor_bind(P_LWPID, P_MYID, v_cpu_id[v_cpu], NULL) != 0)
             #endif
                 fprintf(stderr, "Error setting thread affinity\n");
-	    #endif
-
             ++v_cpu;
         }
 	#endif
