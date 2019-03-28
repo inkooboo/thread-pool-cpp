@@ -9,6 +9,10 @@
 namespace tp
 {
 
+#if defined SLEEP_CNT
+static std::atomic<std::size_t> m_sleep_cnt {};
+#endif
+
 /**
  * @brief The Worker class owns task queue and executing thread.
  * In thread it tries to pop task from queue. If queue is empty then it tries
@@ -104,9 +108,7 @@ private:
     std::mutex m_conditional_mutex;
     std::condition_variable m_conditional_lock;
     bool m_ready = false;
-
 };
-
 
 /// Implementation
 
@@ -215,7 +217,13 @@ inline void Worker<Task, Queue>::threadFunc(std::size_t id, WorkerVector& worker
         {
             std::unique_lock<std::mutex> lock(m_conditional_mutex);
             if (std::exchange(m_ready, false)) continue;    // If post() occurs here, don't sleep
+            #if defined SLEEP_CNT
+            m_sleep_cnt.fetch_add(1, std::memory_order_relaxed);
+            #endif
             m_conditional_lock.wait(lock, [this] { return std::exchange(m_ready, false); });
+            #if defined SLEEP_CNT
+            m_sleep_cnt.fetch_sub(1, std::memory_order_relaxed);
+            #endif
         }
         if (!m_running_flag.load(std::memory_order_relaxed)) break;
     }
