@@ -102,19 +102,12 @@ public:
      */
     template <typename Handler>
     void post(Handler&& handler);
+
 private:
     Worker<Task, Queue>& getWorker();
 
     WorkerVector m_workers;
     std::atomic<std::size_t> m_next_worker;
-
-    #if defined __sun__ || defined __linux__ || defined __FreeBSD__
-    std::size_t v_cpu = 0, v_cpu_max = std::thread::hardware_concurrency() - 1;
-    #endif
-
-    #if defined __sun__
-    std::vector<processorid_t> v_cpu_id;	/* Struct for CPU/core ID */
-    #endif
 };
 
 /// Implementation
@@ -131,6 +124,7 @@ inline ThreadPoolImpl<Task, Queue>::ThreadPoolImpl(
     }
 
     #if defined __sun__
+    std::vector<processorid_t> v_cpu_id;	/* Struct for CPU/core ID */
     if (v_affinity) {
         for (processorid_t i = 0; i <= sysconf(_SC_CPUID_MAX); ++i) {
             if (p_online(i, P_STATUS) == P_ONLINE)	/* Get only online cores ID */
@@ -138,12 +132,15 @@ inline ThreadPoolImpl<Task, Queue>::ThreadPoolImpl(
         }
     }
     #endif
+    #if defined __sun__ || defined __linux__ || defined __FreeBSD__
+    std::size_t v_cpu = 0;
+    #endif
 
     for(std::size_t i = 0; i < m_workers.size(); ++i)
     {
 	#if defined __sun__ || defined __linux__ || defined __FreeBSD__
         if (v_affinity) {
-            if (v_cpu > v_cpu_max)
+            if (v_cpu > std::thread::hardware_concurrency() - 1)
                 v_cpu = 0;
             #if defined __linux__
             cpu_set_t mask;
