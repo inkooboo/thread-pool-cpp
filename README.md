@@ -36,3 +36,4 @@ Additions
 2. Affinity (by round-robin) added for Linux/Solaris/FreeBSD. Affinity control flag added.
 3. Round Robin Queue Servicing from https://github.com/inkooboo/thread-pool-cpp/pull/24 are implemented.
 4. Oracle Developer Studio support
+5. Sleep counter added.
