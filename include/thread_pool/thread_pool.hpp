@@ -14,6 +14,7 @@
 #include <memory>
 #include <vector>
 #include <utility>
+#include <chrono>
 
 #if defined __sun__
 #include <cstdio>		/* For std::fprintf */
@@ -206,11 +207,8 @@ template <typename Task, template<typename> class Queue>
 template <typename Handler>
 inline void ThreadPoolImpl<Task, Queue>::post(Handler&& handler)
 {
-    const auto ok = tryPost(std::forward<Handler>(handler));
-    if (!ok)
-    {
-        throw std::runtime_error("thread pool queue is full");
-    }
+    while (!tryPost(std::forward<Handler>(handler)))	/* We're assumes external producer can wait or have some kind of queue */
+        std::this_thread::sleep_for(std::chrono::microseconds(1));
 }
 
 template <typename Task, template<typename> class Queue>
