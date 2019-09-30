@@ -220,7 +220,7 @@ inline void Worker<Task, Queue>::threadFunc(std::size_t id, WorkerVector& worker
             #if defined SLEEP_CNT
             m_sleep_cnt.fetch_add(1, std::memory_order_relaxed);
             #endif
-            m_conditional_lock.wait(lock, [this] { return std::exchange(m_ready, false); });
+            m_conditional_lock.wait(lock, [this] { return std::exchange(m_ready, false); });	// std::exchange is C++14
             #if defined SLEEP_CNT
             m_sleep_cnt.fetch_sub(1, std::memory_order_relaxed);
             #endif
