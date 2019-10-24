@@ -191,8 +191,7 @@ inline bool MPMCBoundedQueue<T>::push(U&& data)
     for(;;)
     {
         cell = &m_buffer[pos & m_buffer_mask];
-        std::size_t seq = cell->sequence.load(std::memory_order_acquire);
-        intptr_t dif = (intptr_t)seq - (intptr_t)pos;
+        std::intptr_t dif = (std::intptr_t)(cell->sequence.load(std::memory_order_acquire)) - (std::intptr_t)pos;
         if(dif == 0)
         {
             if(m_enqueue_pos.compare_exchange_weak(pos, pos + 1, std::memory_order_relaxed))
@@ -223,8 +222,7 @@ inline bool MPMCBoundedQueue<T>::pop(T& data)
     for(;;)
     {
         cell = &m_buffer[pos & m_buffer_mask];
-        std::size_t seq = cell->sequence.load(std::memory_order_acquire);
-        intptr_t dif = (intptr_t)seq - (intptr_t)(pos + 1);
+        std::intptr_t dif = (std::intptr_t)(cell->sequence.load(std::memory_order_acquire)) - (std::intptr_t)(pos + 1);
         if(dif == 0)
         {
             if(m_dequeue_pos.compare_exchange_weak(pos, pos + 1, std::memory_order_relaxed))
