@@ -9,8 +9,8 @@
 namespace tp
 {
 
-#if defined SLEEP_CNT
-static std::atomic<std::size_t> m_sleep_cnt {};
+#if defined IDLE_CNT
+static std::atomic<std::size_t> m_idle_cnt {};
 #endif
 
 /**
@@ -102,12 +102,11 @@ private:
     void threadFunc(std::size_t id, WorkerVector& workers);
 
     Queue<Task> m_queue;
-    std::atomic<bool> m_running_flag;
+    std::atomic<bool> m_running_flag, m_ready { false };
     std::thread m_thread;
     std::size_t m_next_donor;
     std::mutex m_conditional_mutex;
     std::condition_variable m_conditional_lock;
-    bool m_ready = false;
 };
 
 /// Implementation
@@ -135,7 +134,7 @@ inline void Worker<Task, Queue>::stop()
     m_running_flag.store(false, std::memory_order_relaxed);
     {
         std::lock_guard<std::mutex> lock(m_conditional_mutex);
-        m_ready = true;
+        m_ready.store(true, std::memory_order_relaxed);
     }
     m_conditional_lock.notify_one();
     m_thread.join();
@@ -159,7 +158,7 @@ inline bool Worker<Task, Queue>::tryPost(Handler&& handler)
 {
     {
         std::lock_guard<std::mutex> lock(m_conditional_mutex);
-        m_ready = true;
+        m_ready.store(true, std::memory_order_relaxed);
     }
     m_conditional_lock.notify_one();
     return m_queue.push(std::forward<Handler>(handler));
@@ -216,13 +215,13 @@ inline void Worker<Task, Queue>::threadFunc(std::size_t id, WorkerVector& worker
         else
         {
             std::unique_lock<std::mutex> lock(m_conditional_mutex);
-            if (std::exchange(m_ready, false)) continue;    // If post() occurs here, don't sleep
-            #if defined SLEEP_CNT
-            m_sleep_cnt.fetch_add(1, std::memory_order_relaxed);
+            if (m_ready.exchange(false, std::memory_order_relaxed)) continue;    // If post() occurs here, don't sleep
+            #if defined IDLE_CNT
+            m_idle_cnt.fetch_add(1, std::memory_order_relaxed);
             #endif
-            m_conditional_lock.wait(lock, [this] { return std::exchange(m_ready, false); });	// std::exchange is C++14
-            #if defined SLEEP_CNT
-            m_sleep_cnt.fetch_sub(1, std::memory_order_relaxed);
+            m_conditional_lock.wait(lock, [this] { return m_ready.exchange(false, std::memory_order_relaxed); });
+            #if defined IDLE_CNT
+            m_idle_cnt.fetch_sub(1, std::memory_order_relaxed);
             #endif
         }
         if (!m_running_flag.load(std::memory_order_relaxed)) break;
