@@ -1,9 +1,9 @@
 #pragma once
 
-#include <thread_pool/fixed_function.hpp>
-#include <thread_pool/mpmc_bounded_queue.hpp>
-#include <thread_pool/thread_pool_options.hpp>
-#include <thread_pool/worker.hpp>
+#include "fixed_function.hpp"
+#include "mpmc_bounded_queue.hpp"
+#include "thread_pool_options.hpp"
+#include "worker.hpp"
 
 #include <atomic>
 #include <memory>
