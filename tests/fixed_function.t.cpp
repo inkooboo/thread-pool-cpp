@@ -115,11 +115,11 @@ TEST(FixedFunction, allocDealloc)
     }
 
     ASSERT_EQ(def + cop + mov, destroyed);
-    ASSERT_EQ(2, def);
-    ASSERT_EQ(0, cop);
-    ASSERT_EQ(6, mov);
-    ASSERT_EQ(0, cop_ass);
-    ASSERT_EQ(0, mov_ass);
+    ASSERT_EQ(2llu, def);
+    ASSERT_EQ(0llu, cop);
+    ASSERT_EQ(6llu, mov);
+    ASSERT_EQ(0llu, cop_ass);
+    ASSERT_EQ(0llu, mov_ass);
 }
 
 TEST(FixedFunction, freeFunc)
