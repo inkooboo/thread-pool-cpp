@@ -59,7 +59,7 @@ public:
 
         m_alloc_ptr = [](void* storage_ptr, void* object_ptr)
         {
-            if(object_ptr)
+            if (object_ptr)
             {
                 unref_type* x_object = static_cast<unref_type*>(object_ptr);
                 new(storage_ptr) unref_type(std::move(*x_object));
@@ -100,7 +100,7 @@ public:
 
     ~FixedFunction()
     {
-        if(m_alloc_ptr) m_alloc_ptr(&m_storage, nullptr);
+        if (m_alloc_ptr) m_alloc_ptr(&m_storage, nullptr);
     }
 
     /**
@@ -109,7 +109,7 @@ public:
      */
     R operator()(ARGS... args)
     {
-        if(!m_method_ptr) throw std::runtime_error("call of empty functor");
+        if (!m_method_ptr) throw std::runtime_error("call of empty functor");
         return m_method_ptr(&m_storage, m_function_ptr, args...);
     }
 
@@ -133,9 +133,9 @@ private:
 
     void moveFromOther(FixedFunction& o)
     {
-        if(this == &o) return;
+        if (this == &o) return;
 
-        if(m_alloc_ptr)
+        if (m_alloc_ptr)
         {
             m_alloc_ptr(&m_storage, nullptr);
             m_alloc_ptr = nullptr;
@@ -148,7 +148,7 @@ private:
         m_method_ptr = o.m_method_ptr;
         o.m_method_ptr = nullptr;
 
-        if(o.m_alloc_ptr)
+        if (o.m_alloc_ptr)
         {
             m_alloc_ptr = o.m_alloc_ptr;
             m_alloc_ptr(&m_storage, &o.m_storage);

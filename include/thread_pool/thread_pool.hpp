@@ -119,7 +119,7 @@ inline ThreadPoolImpl<Task, Queue>::ThreadPoolImpl(
     : m_workers(options.threadCount())
     , m_next_worker(0)
 {
-    for(auto& worker_ptr : m_workers)
+    for (auto& worker_ptr : m_workers)
     {
         worker_ptr.reset(new Worker<Task, Queue>(options.queueSize()));
     }
@@ -137,7 +137,7 @@ inline ThreadPoolImpl<Task, Queue>::ThreadPoolImpl(
     std::size_t v_cpu = 0;
     #endif
 
-    for(std::size_t i = 0; i < m_workers.size(); ++i)
+    for (std::size_t i = 0; i < m_workers.size(); ++i)
     {
 	#if defined __sun__ || defined __linux__ || defined __FreeBSD__
         if (v_affinity) {

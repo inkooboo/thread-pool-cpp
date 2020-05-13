@@ -173,7 +173,7 @@ inline bool Worker<Task, Queue>::tryGetLocalTask(Task& task)
 template <typename Task, template<typename> class Queue>
 inline bool Worker<Task, Queue>::tryRoundRobinSteal(Task& task, WorkerVector& workers)
 {
-    auto starting_index = m_next_donor;
+    const auto starting_index = m_next_donor;
     // Iterate once through the worker ring, checking for queued work items on each thread.
     do
     {
