@@ -126,8 +126,10 @@ inline ThreadPoolImpl<Task, Queue>::ThreadPoolImpl(
 
     #if defined __sun__
     std::vector<processorid_t> v_cpu_id;	/* Struct for CPU/core ID */
-    if (v_affinity) {
-        for (processorid_t i = 0; i <= sysconf(_SC_CPUID_MAX); ++i) {
+    if (v_affinity)
+    {
+        for (processorid_t i = 0; i <= sysconf(_SC_CPUID_MAX); ++i)
+	{
             if (p_online(i, P_STATUS) == P_ONLINE)	/* Get only online cores ID */
                 v_cpu_id.push_back(i);
         }

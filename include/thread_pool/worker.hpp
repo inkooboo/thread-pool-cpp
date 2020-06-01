@@ -198,7 +198,7 @@ inline void Worker<Task, Queue>::threadFunc(std::size_t id, WorkerVector& worker
 
     Task handler;
 
-    for (;;)
+    while (m_running_flag.load(std::memory_order_relaxed))
     {
         // Prioritize local queue, then try stealing from sibling workers.
         if (tryGetLocalTask(handler) || tryRoundRobinSteal(handler, workers))
@@ -224,7 +224,6 @@ inline void Worker<Task, Queue>::threadFunc(std::size_t id, WorkerVector& worker
             m_idle_cnt.fetch_sub(1, std::memory_order_relaxed);
             #endif
         }
-        if (!m_running_flag.load(std::memory_order_relaxed)) break;
     }
 }
 
