@@ -99,7 +99,7 @@ private:
      * @param id Worker ID to be associated with this thread.
      * @param workers Sibling workers for performing round robin work stealing.
      */
-    void threadFunc(std::size_t id, WorkerVector& workers);
+    void threadFunc(std::size_t id, WorkerVector& workers) noexcept;
 
     Queue<Task> m_queue;
     std::atomic<bool> m_running_flag, m_ready { false };
@@ -191,7 +191,7 @@ inline bool Worker<Task, Queue>::tryRoundRobinSteal(Task& task, WorkerVector& wo
 }
 
 template <typename Task, template<typename> class Queue>
-inline void Worker<Task, Queue>::threadFunc(std::size_t id, WorkerVector& workers)
+inline void Worker<Task, Queue>::threadFunc(std::size_t id, WorkerVector& workers) noexcept
 {
     detail::thread_id() = id;
     m_next_donor = (id + 1) % workers.size();
@@ -215,7 +215,7 @@ inline void Worker<Task, Queue>::threadFunc(std::size_t id, WorkerVector& worker
         else
         {
             std::unique_lock<std::mutex> lock(m_conditional_mutex);
-            if (m_ready.exchange(false, std::memory_order_relaxed)) continue;    // If post() occurs here, don't sleep
+            if (m_ready.exchange(false, std::memory_order_relaxed)) continue;// If post() occurs here, don't sleep
             #if defined IDLE_CNT
             m_idle_cnt.fetch_add(1, std::memory_order_relaxed);
             #endif
