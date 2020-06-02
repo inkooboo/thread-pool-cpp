@@ -12,12 +12,12 @@
 #include <stdexcept>
 #include <atomic>
 #include <memory>
-#include <vector>
 #include <utility>
 #include <chrono>
 
 #if defined __sun__
 #include <cstdio>		/* For std::fprintf */
+#include <vector>
 #include <sys/types.h>
 #include <sys/processor.h>
 #include <sys/procset.h>
@@ -98,17 +98,18 @@ public:
      * @brief post Post job to thread pool.
      * @param handler Handler to be called from thread pool worker. It has
      * to be callable as 'handler()'.
-     * @throw std::overflow_error if worker's queue is full.
      * @note All exceptions thrown by handler will be suppressed.
      */
     template <typename Handler>
-    void post(Handler&& handler);
+    void post(Handler&& handler) noexcept;
 
 private:
     Worker<Task, Queue>& getWorker();
-
     WorkerVector m_workers;
     std::atomic<std::size_t> m_next_worker;
+
+    std::mutex m_conditional_mutex;
+    std::condition_variable m_conditional_lock;
 };
 
 /// Implementation
@@ -207,10 +208,13 @@ inline bool ThreadPoolImpl<Task, Queue>::tryPost(Handler&& handler)
 
 template <typename Task, template<typename> class Queue>
 template <typename Handler>
-inline void ThreadPoolImpl<Task, Queue>::post(Handler&& handler)
+inline void ThreadPoolImpl<Task, Queue>::post(Handler&& handler) noexcept
 {
-    while (!tryPost(std::forward<Handler>(handler)))	/* We're assumes external producer can wait or have some kind of queue */
-        std::this_thread::sleep_for(std::chrono::microseconds(1));
+    while (!tryPost(std::forward<Handler>(handler)))  /* We're assumes external producer can wait or have some kind of queue */
+    {
+        std::unique_lock<std::mutex> lock(m_conditional_mutex);
+        m_conditional_lock.wait_for(lock, std::chrono::microseconds(1), []{ return false; });
+    }
 }
 
 template <typename Task, template<typename> class Queue>
