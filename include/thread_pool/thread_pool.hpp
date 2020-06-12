@@ -212,7 +212,7 @@ inline void ThreadPoolImpl<Task, Queue>::post(Handler&& handler) noexcept
 {
     for (;;)	/* We're assumes external producer can wait or have some kind of queue */
     {
-        for (const auto& w : m_workers)	/* First try post current queue; if overflow, try post other queues before wait */
+        for (std::size_t i = 0; i < m_workers.size(); ++i)/* First try post current queue; if overflow, try post other queues before wait */
             if (tryPost(std::forward<Handler>(handler))) return;
         std::unique_lock<std::mutex> lock(m_conditional_mutex);
         m_conditional_lock.wait_for(lock, std::chrono::microseconds(1), []{ return false; });
