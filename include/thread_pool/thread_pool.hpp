@@ -1,10 +1,8 @@
 #pragma once
 
-#if defined __SUNPRO_CC
-#include <functional>
-#else
-#include <fixed_function.hpp>
-#endif
+#define DELEGATE_ARGS_SIZE 128
+#include <delegate.h>
+
 #include <mpmc_bounded_queue.hpp>
 #include <thread_pool_options.hpp>
 #include <worker.hpp>
@@ -40,13 +38,8 @@ static bool v_affinity = false;	/* Default: disabled */
 template <typename Task, template<typename> class Queue>
 class ThreadPoolImpl;
 
-#if defined __SUNPRO_CC
-using ThreadPool = ThreadPoolImpl<std::function<void()>,
+using ThreadPool = ThreadPoolImpl<delegate::Func<delegate::NonCopyableType, void>,
                                   MPMCBoundedQueue>;
-#else
-using ThreadPool = ThreadPoolImpl<FixedFunction<void(), 128>,
-                                  MPMCBoundedQueue>;
-#endif
 
 /**
  * @brief The ThreadPool class implements thread pool pattern.
