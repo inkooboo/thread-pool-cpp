@@ -10,6 +10,12 @@ thread-pool-cpp
  * It implements both work-stealing and work-distribution balancing startegies.
  * It implements cooperative scheduling strategy.
 
+Advantages of c++:
+1.Portability
+2.Object oriented
+3.Multi paradigm
+4.Low level manipulation
+5.Memory management
 Example run:
 Post job to thread pool is much faster than for boost::asio based thread pool.
 
